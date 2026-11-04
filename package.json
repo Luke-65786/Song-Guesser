@@ -1,0 +1,14 @@
+{
+  "name": "offbeat-song-guesser",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A music guessing game with artist mixes, catalog search, and local audio support.",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test test/*.test.js",
+    "check": "node --check server.js && node --check public/app.js && node --check public/game.js"
+  },
+  "engines": { "node": ">=22" }
+}

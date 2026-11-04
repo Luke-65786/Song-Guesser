@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f7f2">
+  <meta name="description" content="A little sound. A big clue. Guess the song from a tiny clip. Play artist mixes, explore a music catalog, or bring your own tracks.">
+  <title>Offbeat — Name that feeling. Guess that song.</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <svg class="svg-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-logo" viewBox="0 0 24 24"><path d="M4 10v5M9 6v13M14 3v18M19 8v9"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="m17 3 4 4-4 4m0 2 4 4-4 4M3 7h3c5 0 7 10 12 10h3M3 17h3c2 0 3.5-2 5-5m2-3c1.5-1.5 3-2 5-2h3"/></symbol>
+    <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-3v13M9 9l12-3"/><ellipse cx="5.5" cy="18" rx="3.5" ry="3"/><ellipse cx="17.5" cy="15" rx="3.5" ry="3"/></symbol>
+    <symbol id="i-headphones" viewBox="0 0 24 24"><path d="M3 14v-3a9 9 0 0 1 18 0v3"/><rect x="2" y="12" width="5" height="9" rx="2"/><rect x="17" y="12" width="5" height="9" rx="2"/></symbol>
+    <symbol id="i-fire" viewBox="0 0 24 24"><path d="M12 2s2 6-2 9c-2-1-3-3-3-3s-5 5-3 10c3 7 14 5 16-1 2-5-2-9-2-9s0 4-3 5c2-6-3-11-3-11Z"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9Z"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="i-skip" viewBox="0 0 24 24"><path d="m5 5 10 7-10 7Z"/><path d="M19 5v14"/></symbol>
+    <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18v-2a7 7 0 1 1 6 0v2M9 18h6m-6 3h6M12 1v-1M3 4 1 2m20 2 2-2"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V3m-5 5 5-5 5 5M4 15v6h16v-6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M5 20v-7m7 7V4m7 16V9"/></symbol>
+    <symbol id="i-volume" viewBox="0 0 24 24"><path d="m11 4-6 5H2v6h3l6 5Zm4 4a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></symbol>
+  </svg>
+  <a class="skip-link" href="#game">Skip to the game</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="/" class="brand" aria-label="Offbeat home"><span class="brand-icon"><svg><use href="#i-logo"/></svg></span>offbeat<span class="brand-dot">.</span></a>
+      <nav aria-label="Main navigation"><a class="nav-active" href="#game">Let's play <span></span></a><button id="how-button">How to play</button><button id="stats-button"><svg><use href="#i-chart"/></svg><span>Your stats</span></button></nav>
+      <span class="header-note"><span class="live-dot"></span> Made for music people</span>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy"><div class="eyebrow"><span class="tiny-spark">✳</span> SMALL CLIPS. BIG MUSIC ENERGY.</div><h1 id="hero-title">You know the song.<br>But how <span class="accent-word">soon<svg viewBox="0 0 190 15" aria-hidden="true"><path d="M3 10C55 1 122 2 185 6M12 14c54-7 111-7 160-5"/></svg></span>?</h1><p>Put your ears to the test. One second might be all you need.</p></div>
+      <div class="hero-art" aria-hidden="true"><span class="art-spark spark-one">✳</span><span class="art-spark spark-two">+</span><div class="album-sleeve"><span class="sleeve-top">OFFBEAT RECORDS</span><div class="sleeve-circle"></div><span class="sleeve-bottom">FOR THE LOVE<br>OF THE FIRST NOTE.</span><span class="sleeve-number">VOL.<br><b>01</b></span></div><div class="vinyl"><div class="vinyl-label"><svg><use href="#i-logo"/></svg><i></i></div></div><span class="art-caption">less thinking, more listening.</span><svg class="art-arrow" viewBox="0 0 100 50"><path d="M4 37c42 22 74-3 70-29m-8 9 8-11 9 12"/></svg></div>
+    </section>
+
+    <section class="play-layout" id="game" aria-label="Song guessing game">
+      <div class="game-card">
+        <div class="game-topline"><button class="mix-label" id="change-mix"><svg><use href="#i-shuffle"/></svg><span id="mix-label">The everything mix</span><span class="chevron">⌄</span></button><span class="round-indicator">ROUND <b id="round-number">01</b><span> / <span id="round-total">05</span></span></span></div>
+        <div class="question-row"><div><h2 id="game-title">What's the track?</h2><p id="game-subtitle">A familiar tune. A tiny snippet. You’ve got this.</p></div><span class="points-pill"><svg><use href="#i-star"/></svg><span id="available-points">1,000</span> pts up for grabs</span></div>
+
+        <div class="audio-player" id="audio-player">
+          <button class="play-button" id="play-button" aria-label="Play song clip"><svg class="play-symbol" viewBox="0 0 24 24"><path d="m9 5 11 7-11 7Z"/></svg><svg class="pause-symbol" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg><span class="loading-spinner"></span></button>
+          <div class="wave-area"><div class="waveform" id="waveform" aria-hidden="true"></div><div class="wave-caption"><span id="play-caption">Press play. Find your first clue.</span><span id="audio-time">0:00 <span>/ 0:01</span></span></div></div>
+          <button class="volume-button" id="mute-button" aria-label="Mute audio" aria-pressed="false"><svg><use href="#i-volume"/></svg></button>
+        </div>
+        <div class="clip-steps" id="clip-steps" aria-label="Clip lengths"><div class="clip-step active"><span>1s</span></div><div class="clip-step"><span>2s</span></div><div class="clip-step"><span>4s</span></div><div class="clip-step"><span>7s</span></div><div class="clip-step"><span>11s</span></div><div class="clip-step"><span>16s</span></div></div>
+        <div class="attempt-line"><span id="attempt-label">GUESS 1 OF 6</span><span>Each skip unlocks a little more.</span></div>
+
+        <div id="result" class="result" hidden aria-live="polite"></div>
+        <form id="guess-form" autocomplete="off">
+          <label class="sr-only" for="guess-input">Song title or artist</label>
+          <div class="guess-row"><div class="search-wrap"><svg><use href="#i-search"/></svg><input id="guess-input" placeholder="Know it? Search for a song or artist…" role="combobox" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false" maxlength="150"><kbd>/</kbd><div id="suggestions" class="suggestions" role="listbox" aria-label="Song suggestions" hidden></div></div><button class="primary-button" id="guess-button" type="submit">Guess <svg><use href="#i-arrow"/></svg></button></div>
+          <div class="game-bottom"><button class="text-button" id="hint-button" type="button"><svg><use href="#i-bulb"/></svg>Need a hint?<span>−150 pts</span></button><button class="skip-button" id="skip-button" type="button">Skip <span>(+1 second)</span><svg><use href="#i-skip"/></svg></button></div>
+        </form>
+        <div id="feedback" class="feedback" role="status" aria-live="polite"></div>
+        <button class="primary-button next-button" id="next-button" hidden>Next song <svg><use href="#i-arrow"/></svg></button>
+      </div>
+
+      <aside class="session-column" aria-label="Session progress">
+        <div class="session-card"><div class="section-label">YOUR SESSION <span class="session-dot"></span></div><div class="session-stats"><div><span><svg><use href="#i-star"/></svg> Score</span><strong id="score">0</strong></div><div><span><svg><use href="#i-fire"/></svg> Streak</span><strong id="streak">0<span> songs</span></strong></div></div><div class="round-list" id="round-list"></div><div class="session-footer"><svg><use href="#i-headphones"/></svg> Five songs. Infinite bragging rights.</div></div>
+        <div class="tip-card"><span class="tip-icon">✳</span><div><strong>A tip for your ears</strong><p>Headphones on. World off.<br>Sometimes it’s all in the bassline.</p></div></div>
+      </aside>
+    </section>
+
+    <section class="mix-section" aria-labelledby="mix-heading"><div class="mix-section-heading"><h2 id="mix-heading">Your music. Your kind of challenge.</h2><span>Find your frequency <svg><use href="#i-arrow"/></svg></span></div><div class="mix-cards">
+      <button class="mix-card" data-preset="everything"><span class="mix-card-icon peach"><svg><use href="#i-shuffle"/></svg></span><span><strong>A little bit of everything</strong><small>Big hits, deep cuts, all the good stuff.</small></span><svg class="card-arrow"><use href="#i-arrow"/></svg></button>
+      <button class="mix-card" data-preset="artist"><span class="mix-card-icon lilac"><svg><use href="#i-music"/></svg></span><span><strong>For the superfans</strong><small>Pick an artist. Prove you know them.</small></span><svg class="card-arrow"><use href="#i-arrow"/></svg></button>
+      <button class="mix-card" data-preset="upload"><span class="mix-card-icon sage"><svg><use href="#i-upload"/></svg></span><span><strong>Bring your own tracks</strong><small>Your library, a whole new way to play.</small></span><svg class="card-arrow"><use href="#i-arrow"/></svg></button>
+    </div></section>
+    <footer class="site-footer"><span class="footer-tagline">Less scrolling. More <svg><use href="#i-music"/></svg> <b>“I know this one!”</b></span><span>Made with good taste. And a little obsession.</span><button id="demo-button">Try the offline demo <span>↗</span></button></footer>
+  </main>
+
+  <dialog id="modal" aria-labelledby="modal-title"><div class="modal-header"><span class="brand-icon small"><svg><use href="#i-logo"/></svg></span><button class="icon-button" id="close-modal" aria-label="Close dialog"><svg><use href="#i-close"/></svg></button></div><div id="modal-body"></div></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <audio id="audio" preload="none"></audio>
+</body>
+</html>

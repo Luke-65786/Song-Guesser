@@ -1,0 +1,45 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { CLIP_LENGTHS, DEMO_SONGS, normalize, isCorrect, pointsFor, shuffle, catalogSongs, trackFromFile } from '../public/game.js';
+
+test('six increasingly long clips and descending point values', () => {
+  assert.deepEqual(CLIP_LENGTHS, [1, 2, 4, 7, 11, 16]);
+  assert.deepEqual(CLIP_LENGTHS.map((_, i) => pointsFor(i)), [1000, 800, 600, 400, 250, 100]);
+  assert.equal(pointsFor(0, true), 850);
+  assert.equal(pointsFor(5, true), 50);
+});
+test('typed guesses accept punctuation, accents, and version labels', () => {
+  const song = { id: '1', title: 'Déjà Vu (Remastered)', artist: 'Beyoncé' };
+  assert.ok(isCorrect('Deja Vu', song));
+  assert.ok(isCorrect('Beyonce - deja vu', song));
+  assert.ok(isCorrect('deja vu — beyonce', song));
+  assert.ok(!isCorrect('Beyonce', song));
+  assert.ok(!isCorrect('', song));
+  assert.ok(!isCorrect('something else', song));
+  assert.equal(normalize('Rock & Roll!'), 'rockandroll');
+});
+test('catalog guesses match an alternate release but not another artist', () => {
+  const song = { id: '1', title: 'Hello', artist: 'Adele' };
+  assert.ok(isCorrect({ ...song, id: '2' }, song));
+  assert.ok(!isCorrect({ id: '3', title: 'Hello', artist: 'Lionel Richie' }, song));
+});
+test('catalog drops unplayable songs and duplicates', () => {
+  const song = { kind: 'song', trackId: 1, trackName: 'Test', artistName: 'Artist', previewUrl: 'https://example.com/audio', releaseDate: '2020-01-01' };
+  const result = catalogSongs([song, { ...song, trackId: 2 }, { ...song, previewUrl: '' }, { ...song, kind: 'music-video' }]);
+  assert.equal(result.length, 1);
+  assert.equal(result[0].year, '2020');
+  assert.equal(result[0].preview, song.previewUrl);
+});
+test('shuffle preserves every song without mutating the source', () => {
+  const source = [...DEMO_SONGS];
+  const shuffled = shuffle(source, () => 0);
+  assert.deepEqual(source, DEMO_SONGS);
+  assert.equal(new Set(shuffled.map(song => song.id)).size, 5);
+  assert.notDeepEqual(shuffled, source);
+});
+test('uploaded songs derive title and artist from filenames', () => {
+  assert.deepEqual(trackFromFile({ name: 'My_Artist - My_Song.mp3', size: 120, lastModified: 1 }, 'blob:test'), {
+    id: 'local-My_Artist - My_Song.mp3-120-1', title: 'My Song', artist: 'My Artist', genre: 'Your collection', year: 'Local track', preview: 'blob:test', local: true,
+  });
+  assert.equal(trackFromFile({ name: 'Song.wav' }, 'blob:test').title, 'Song');
+});
