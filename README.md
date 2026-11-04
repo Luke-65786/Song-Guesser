@@ -22,10 +22,10 @@ Website address: **https://luke-65786.github.io/Song-Guesser/**. Initial activat
 To publish later changes after committing them on `main`:
 
 ```sh
-git subtree push --prefix=public origin gh-pages
+npm run publish:pages
 ```
 
-The split keeps publication history, and the push uses normal fast-forward protection. This is a manual publishing flow; pushing `main` alone does not update the deployed site. No API keys or server hosting are needed.
+The publishing script uses Git and Node without extra dependencies, keeps publication history, and uses normal fast-forward protection. Commit changes to `public/` before publishing. This is a manual publishing flow; pushing `main` alone does not update the deployed site. No API keys or server hosting are needed.
 
 ## Play
 
