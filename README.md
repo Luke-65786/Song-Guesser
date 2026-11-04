@@ -13,6 +13,20 @@ npm start
 
 The server listens on port **3000**, or `PORT` if set. `npm run dev` watches the server for changes; refresh the browser after frontend edits. `GET /health` returns `{"ok":true}`.
 
+## GitHub Pages
+
+The browser app is entirely static and also runs without the Node server. The `gh-pages` branch publishes only the contents of `public/`, with relative asset paths that support the `/Song-Guesser/` project URL.
+
+Website address: **https://luke-65786.github.io/Song-Guesser/**. Initial activation requires the repository's **Settings → Pages → Build and deployment** to use **Deploy from a branch**, branch **gh-pages**, folder **/(root)**. Click **Save** and wait for GitHub's Pages build to finish.
+
+To publish later changes after committing them on `main`:
+
+```sh
+git subtree push --prefix=public origin gh-pages
+```
+
+The split keeps publication history, and the push uses normal fast-forward protection. This is a manual publishing flow; pushing `main` alone does not update the deployed site. No API keys or server hosting are needed.
+
 ## Play
 
 - **Everything mix:** five randomly selected songs from popular artists in the US iTunes catalog.

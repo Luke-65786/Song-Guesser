@@ -1,10 +1,10 @@
 export const CLIP_LENGTHS = Object.freeze([1, 2, 4, 7, 11, 16]);
 export const DEMO_SONGS = Object.freeze([
-  { id: 'demo-1', title: 'Neon Avenue', artist: 'Offbeat Originals', genre: 'Synth pop', year: '2026', preview: '/audio/neon-avenue.wav', demo: true },
-  { id: 'demo-2', title: 'Sunday Somewhere', artist: 'Offbeat Originals', genre: 'Lo-fi', year: '2026', preview: '/audio/sunday-somewhere.wav', demo: true },
-  { id: 'demo-3', title: 'After Hours', artist: 'Offbeat Originals', genre: 'Electronic', year: '2026', preview: '/audio/after-hours.wav', demo: true },
-  { id: 'demo-4', title: 'Golden State', artist: 'Offbeat Originals', genre: 'Indie pop', year: '2026', preview: '/audio/golden-state.wav', demo: true },
-  { id: 'demo-5', title: 'Paper Planes', artist: 'Offbeat Originals', genre: 'Chill', year: '2026', preview: '/audio/paper-planes.wav', demo: true },
+  { id: 'demo-1', title: 'Neon Avenue', artist: 'Offbeat Originals', genre: 'Synth pop', year: '2026', preview: new URL('./audio/neon-avenue.wav', import.meta.url).href, demo: true },
+  { id: 'demo-2', title: 'Sunday Somewhere', artist: 'Offbeat Originals', genre: 'Lo-fi', year: '2026', preview: new URL('./audio/sunday-somewhere.wav', import.meta.url).href, demo: true },
+  { id: 'demo-3', title: 'After Hours', artist: 'Offbeat Originals', genre: 'Electronic', year: '2026', preview: new URL('./audio/after-hours.wav', import.meta.url).href, demo: true },
+  { id: 'demo-4', title: 'Golden State', artist: 'Offbeat Originals', genre: 'Indie pop', year: '2026', preview: new URL('./audio/golden-state.wav', import.meta.url).href, demo: true },
+  { id: 'demo-5', title: 'Paper Planes', artist: 'Offbeat Originals', genre: 'Chill', year: '2026', preview: new URL('./audio/paper-planes.wav', import.meta.url).href, demo: true },
 ]);
 
 export function normalize(value) {

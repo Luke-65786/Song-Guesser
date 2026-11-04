@@ -9,7 +9,7 @@ from urllib.parse import parse_qs, urlparse
 from playwright.sync_api import sync_playwright, expect
 
 ROOT = Path(__file__).resolve().parent.parent
-BASE = os.environ.get('OFFBEAT_TEST_URL', 'http://127.0.0.1:3000')
+BASE = os.environ.get('OFFBEAT_TEST_URL', 'http://127.0.0.1:3000').rstrip('/') + '/'
 TRACKS = {
     'neon-avenue': 'Neon Avenue',
     'sunday-somewhere': 'Sunday Somewhere',
@@ -127,7 +127,7 @@ with sync_playwright() as p:
     catalog_page.on('pageerror', lambda error: errors.append(str(error)))
     def mock_catalog(route):
         params = parse_qs(urlparse(route.request.url).query)
-        songs = [{'kind': 'song', 'trackId': i + 1, 'trackName': title, 'artistName': 'Queen', 'primaryGenreName': 'Rock', 'releaseDate': '1980-01-01', 'previewUrl': BASE + '/audio/' + slug + '.wav'} for i, (slug, title) in enumerate(TRACKS.items())]
+        songs = [{'kind': 'song', 'trackId': i + 1, 'trackName': title, 'artistName': 'Queen', 'primaryGenreName': 'Rock', 'releaseDate': '1980-01-01', 'previewUrl': BASE + 'audio/' + slug + '.wav'} for i, (slug, title) in enumerate(TRACKS.items())]
         route.fulfill(status=200, content_type='text/javascript', body=params['callback'][0] + '(' + json.dumps({'results': songs}) + ');')
     catalog_page.route('https://itunes.apple.com/**', mock_catalog)
     catalog_page.goto(BASE, wait_until='networkidle')
