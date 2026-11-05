@@ -446,6 +446,52 @@ dialog::backdrop { background: #0a0c16b3; }
 .custom-rounds input:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
 .custom-rounds > span { font-size: 12px; color: var(--muted); line-height: 1.7; }
 .search-scope { font-size: 12px; color: #c5bdd8; line-height: 1.8; margin: 12px 0 0; overflow-wrap: anywhere; }
+.regular-difficulty-row { grid-column: 1/-1; display: flex; gap: 20px; align-items: center; padding-top: 20px; border-top: 1px solid var(--border); }
+.regular-difficulty-row label { display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: #d5cde6; min-width: 170px; }
+.regular-difficulty-row select, .trending-controls select { min-height: 48px; padding: 0 12px; font: inherit; background: var(--input); color: var(--ink); border: 1px solid #71687f; border-radius: 6px; }
+.regular-difficulty-row > div { flex: 1; }
+.regular-difficulty-row p { margin: 0 0 7px; font-size: 14px; color: #e2d8f1; line-height: 1.7; }
+.regular-difficulty-row small { font-size: 12px; color: var(--muted); line-height: 1.7; display: block; }
+.regular-difficulty-row .outline-button { flex-shrink: 0; }
+.game-mix-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; min-width: 0; }
+.difficulty-badge { font-size: 11px; padding: 6px 9px; border-radius: 5px; border: 1px solid #70617f; color: #dfccef; background: #42344f; white-space: nowrap; }
+.trending-section { margin-top: 30px; padding: 27px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.trending-header { display: flex; gap: 25px; align-items: center; justify-content: space-between; }
+.trending-header h2 { font-size: 25px; margin: 0 0 9px; letter-spacing: -.6px; }
+.trending-header p { font-size: 14px; line-height: 1.8; color: var(--muted); margin: 0; max-width: 460px; }
+.trending-controls { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 12px; }
+.trending-controls label { display: flex; flex-direction: column; gap: 7px; font-size: 12px; color: #d7c9e8; }
+.trending-controls .primary-button { height: 48px; font-size: 14px; gap: 10px; padding: 0 18px; }
+.trending-status { font-size: 13px; line-height: 1.9; color: #c7badb; margin: 21px 0 0; }
+.trending-chart { margin-top: 21px; }
+.trending-chart .song-preview-number { display: inline-block; color: var(--accent); font-size: 15px; font-weight: 600; width: 26px; }
+.trending-chart .song-preview-info strong { font-size: 16px; }
+.trending-chart .song-preview-info small { font-size: 13px; }
+.trending-chart .song-preview-row { padding: 16px 0; }
+.trending-chart .song-preview-button:disabled { opacity: .5; }
+.full-trending-chart { max-height: 55vh; overflow-y: auto; padding-right: 8px; }
+#view-trending { margin-top: 18px; }
+@media (max-width: 900px) {
+  .trending-header { flex-direction: column; align-items: stretch; gap: 19px; }
+  .trending-header p { max-width: none; }
+}
+@media (max-width: 700px) {
+  .regular-difficulty-row { flex-direction: column; align-items: stretch; gap: 16px; padding-top: 17px; }
+  .regular-difficulty-row label { font-size: 14px; }
+  .regular-difficulty-row select { font-size: 16px; height: 52px; }
+  .game-topline { align-items: flex-start; }
+  .game-mix-meta { gap: 9px; flex: 1; }
+  .difficulty-badge { font-size: 10px; }
+  .trending-section { padding: 22px 17px; }
+  .trending-header h2 { font-size: 23px; }
+  .trending-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+  .trending-controls label { grid-column: 1/-1; font-size: 13px; }
+  .trending-controls select { font-size: 16px; }
+  .trending-controls .outline-button, .trending-controls .primary-button { padding: 0 10px; font-size: 13px; }
+  .trending-chart .song-preview-number { width: 20px; font-size: 13px; }
+  .trending-chart .song-preview-info strong { font-size: 14px; }
+  .trending-chart .song-preview-info small { font-size: 12px; }
+}
 .artist-library { margin-top: 20px; padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
 .artist-library-header { display: flex; justify-content: space-between; align-items: center; gap: 22px; }
 .artist-library-header h2 { font-size: 20px; letter-spacing: -.4px; margin: 0 0 7px; }
