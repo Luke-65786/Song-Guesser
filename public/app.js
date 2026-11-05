@@ -3,6 +3,7 @@ import { catalogRequest, catalogSearch, catalogLookup } from './catalog.js';
 import { ERAS, GENRES, emptyFilters, filterLabel, filterSongs, discoveryTerms } from './filters.js';
 import { createSongPreviews } from './song-previews.js';
 import { MAX_PLAYLIST_ARTISTS, cleanArtists, readArtistLibrary, saveArtistLibrary, roundSetting, chooseRounds, buildArtistDeck } from './artist-library.js';
+import { findMixSuggestions, scopedSongs, searchText, searchScopeLabel } from './suggestions.js';
 
 const $ = selector => document.querySelector(selector);
 const icon = name => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
@@ -10,7 +11,7 @@ const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;
 const audio = $('#audio');
 const modal = $('#modal');
 const songPreviews = createSongPreviews($('#artist-preview-audio'), () => { stopAudio(); demoAudio?.pause(); clearTimeout(demoTimer); $('#artist-preview-audio').muted = audio.muted; });
-const state = { mode: 'everything', label: 'The everything mix', artist: '', filters: emptyFilters(), roundSetting: 5, requestedRounds: 5, playlist: [], deck: [], round: 0, attempt: 0, hinted: false, revealed: false, listened: false, results: [], score: 0, streak: 0, maxStreak: 0, loading: false, selected: null, suggestions: [], localTracks: [], generation: 0, finished: false, searchGeneration: 0 };
+const state = { mode: 'everything', label: 'The everything mix', artist: '', filters: emptyFilters(), roundSetting: 5, requestedRounds: 5, playlist: [], searchPool: [], deck: [], round: 0, attempt: 0, hinted: false, revealed: false, listened: false, results: [], score: 0, streak: 0, maxStreak: 0, loading: false, selected: null, suggestions: [], localTracks: [], generation: 0, finished: false, searchGeneration: 0 };
 let libraryStorage;
 try { libraryStorage = localStorage; } catch { /* In-memory library when storage is unavailable. */ }
 let artistLibrary = readArtistLibrary(libraryStorage);
@@ -95,9 +96,7 @@ async function prepareDeck() {
         if (!songs.length) throw new Error('No playable songs match all these filters. Try a broader era or genre, or clear the album.');
       }
       else if (state.mode === 'artist') {
-        songs = await catalogSearch(state.artist);
-        const exact = songs.filter(song => normalize(song.artist) === normalize(state.artist));
-        if (exact.length) songs = exact;
+        songs = scopedSongs(await catalogSearch(state.artist), { mode: 'artist', artist: state.artist });
       } else {
         const artists = shuffle(['Dua Lipa', 'The Weeknd', 'Queen', 'Adele', 'Daft Punk', 'Taylor Swift', 'Coldplay', 'Billie Eilish', 'Bruno Mars', 'Rihanna', 'ABBA', 'Harry Styles']).slice(0, 3);
         const searches = await Promise.allSettled(artists.map(catalogSearch));
@@ -105,6 +104,7 @@ async function prepareDeck() {
       }
       if (generation !== state.generation) return false;
       if (!songs?.length) throw new Error('No playable previews found for this mix.');
+      state.searchPool = songs;
       state.deck = buildArtistDeck(groups || [songs], state.requestedRounds);
       renderRound();
       if (state.deck.length < state.requestedRounds) $('#feedback').textContent = `This mix has ${state.deck.length} unique playable songs, so your session has ${state.deck.length} rounds.`;
@@ -163,6 +163,7 @@ function renderRound() {
   $('#game-title').textContent = "What's the track?";
   $('#game-subtitle').textContent = state.mode === 'demo' ? 'An original demo tune. Listen, then take your best guess.' : state.mode === 'local' ? 'Your library. A tiny snippet. Put your ears to the test.' : 'A familiar tune. A tiny snippet. You’ve got this.';
   $('#mix-label').textContent = state.label;
+  $('#search-scope').textContent = searchScopeLabel(state);
   $('#play-caption').textContent = 'Press play. Find your first clue.';
   closeSuggestions(); updateAttempt(); renderSession(); updateControls();
 }
@@ -255,16 +256,12 @@ async function searchSuggestions() {
   const generation = state.generation;
   const searchGeneration = ++state.searchGeneration;
   const valid = () => generation === state.generation && searchGeneration === state.searchGeneration && $('#guess-input').value.trim() === query && !state.revealed;
-  if (state.mode === 'demo' || state.mode === 'local') {
-    const pool = state.mode === 'demo' ? DEMO_SONGS : state.localTracks;
-    const songs = pool.filter(song => normalize(song.title + song.artist).includes(normalize(query))).slice(0, 8);
-    showSuggestions(songs, songs.length ? '' : 'No matching title. You can still submit a typed guess.');
-    return;
-  }
-  showSuggestions([], 'Searching the music catalog…');
+  const scope = { mode: state.mode, artist: state.artist, filters: { ...state.filters }, playlist: [...state.playlist] };
+  const pool = state.mode === 'demo' ? DEMO_SONGS : state.mode === 'local' ? state.localTracks : state.searchPool;
+  showSuggestions([], 'Finding matching songs…');
   try {
-    const songs = await catalogSearch(query);
-    if (valid()) showSuggestions(songs.slice(0, 7), songs.length ? '' : 'No matches. Try a different title, or submit your typed guess.');
+    const songs = await findMixSuggestions(query, scope, pool);
+    if (valid()) showSuggestions(songs.slice(0, 7), songs.length ? '' : 'No matching songs in this mix. Try another title or artist, or submit your typed guess.');
   } catch {
     if (valid()) showSuggestions([], 'Search is unavailable. You can still type the song title and press Guess.');
   }
@@ -380,13 +377,14 @@ function restart(mode, label, artist = '', tracks = null, filters = null, rounds
     state.localTracks.forEach(track => { if (!tracks.some(item => item.id === track.id)) URL.revokeObjectURL(track.preview); });
     state.localTracks = tracks;
   }
-  Object.assign(state, { mode, label, artist, filters: filters || emptyFilters(), roundSetting: rounds, requestedRounds: chooseRounds(rounds), playlist: cleanArtists(artists), deck: [], round: 0, attempt: 0, hinted: false, revealed: false, listened: false, results: [], score: 0, streak: 0, maxStreak: 0, loading: false, selected: null, finished: false });
+  Object.assign(state, { mode, label, artist, filters: filters || emptyFilters(), roundSetting: rounds, requestedRounds: chooseRounds(rounds), playlist: cleanArtists(artists), searchPool: [], deck: [], round: 0, attempt: 0, hinted: false, revealed: false, listened: false, results: [], score: 0, streak: 0, maxStreak: 0, loading: false, selected: null, finished: false });
   syncRoundControls(rounds);
   filterDraft = { ...state.filters };
   renderFilters(mode === 'filtered' ? 'Mix applied. Press play to discover your songs.' : 'Pick a decade, a genre, or a favorite. Mix them together.');
   closeModal(); renderRound();
   if (mode === 'demo' || mode === 'local') {
-    state.deck = buildArtistDeck([mode === 'demo' ? DEMO_SONGS : state.localTracks], state.requestedRounds); renderSession();
+    state.searchPool = mode === 'demo' ? DEMO_SONGS : state.localTracks;
+    state.deck = buildArtistDeck([state.searchPool], state.requestedRounds); renderSession();
     if (mode === 'demo') $('#feedback').innerHTML = 'Demo mix: five original tunes, made for Offbeat. <button type="button" data-action="demo-guide">Meet the tracks</button> before you listen.';
     if (state.deck.length < state.requestedRounds) $('#feedback').append(` Your library has ${state.deck.length} unique songs, so this session has ${state.deck.length} rounds.`);
   }
@@ -642,10 +640,10 @@ async function findArtist(artist) {
     const songs = await catalogSearch(artist.trim());
     if (!valid()) return;
     if (!songs.length) { statusText('No playable songs found. Try another artist or spelling.'); return; }
-    const exact = songs.find(song => normalize(song.artist) === normalize(artist));
+    const exact = songs.find(song => searchText(song.artist) === searchText(artist));
     const chosen = exact || songs[0];
     const name = chosen.artist;
-    const matches = songs.filter(song => chosen.artistId ? song.artistId === chosen.artistId : normalize(song.artist) === normalize(name));
+    const matches = songs.filter(song => chosen.artistId ? song.artistId === chosen.artistId : searchText(song.artist) === searchText(name));
     statusText(`${matches.length} playable songs by ${name}. Listen below, then start your mix.`);
     const previews = $('#artist-song-previews');
     previews.hidden = false; songPreviews.render(previews, matches, name);

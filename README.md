@@ -49,6 +49,10 @@ Artist searches include **Song previews**: up to five playable tracks with title
 
 All selected filters must match. Artist and album IDs determine membership, and decades use catalog release dates (which can differ for reissues). Discovery mixes sample catalog searches around artists in the selected era/genre; they are not an exhaustive list of all matching songs. Sessions use the selected round count, capped by available unique tracks. An empty combination asks you to broaden the filters rather than substituting unrelated songs. The interface always uses the dark theme, including native inputs and dialogs, regardless of system preferences.
 
+The **song guessing search follows the active mix**. Artist and album mixes only suggest songs from that collection; playlist and liked-artist mixes only suggest their selected artist IDs. Genre and era constraints apply together. The search covers the full eligible catalog pool available to the mix, including songs not drawn for the current session. With no active constraints, it searches the general catalog. Uploaded and demo mixes search their own libraries. A label below the input shows the current search scope. Unapplied changes to filters or the saved playlist do not change suggestions for an ongoing game—use **Apply mix** or **Shuffle playlist** to start the new configuration. Artist discovery remains open so you can add new artists to a lineup.
+
+Song/artist/album words can be typed in any order, and search matching supports accents and non-Latin names. Loaded artist/album/playlist pools are searched locally, so those suggestions remain usable if the catalog temporarily becomes unreachable. Searches discard replies for an older query or mix rather than showing stale results.
+
 Clips unlock at **0.1, 0.5, 1, 3, 5, 10, and 15 seconds**. Correct answers earn 1,000, 900, 800, 600, 400, 250, or 100 points respectively. A hint deducts 150 points, with a minimum award of 50. Replay a clip freely, submit a typed title or pick a search result, and skip to unlock more audio. After seven attempts, the song is revealed; replays after a reveal are capped at 15 seconds. Playback is a single progress line with fractional time labels, and the session/leaderboard sidebar is hidden. Personal stats remain available through **Your stats**. Completed-session stats are stored in this browser's localStorage. Local libraries and in-progress sessions do not persist after reload.
 
 Keyboard support: `/` focuses the guess input, arrow keys navigate search results, Enter selects or submits, and Escape closes a dialog or suggestions. Reduced motion and mobile layouts are supported.
@@ -79,6 +83,7 @@ python3 scripts/browser-filters.py
 python3 scripts/browser-playback.py
 python3 scripts/browser-artist-previews.py
 python3 scripts/browser-artist-library.py
+python3 scripts/browser-search-scope.py
 ```
 
 Override `CHROMIUM_PATH` or `OFFBEAT_TEST_URL` if needed. These tests play real local audio and exercise sessions, timing, uploads, saved stats, network failure recovery, desktop/mobile layouts, and a **mocked** catalog response. Screenshots are written to `/tmp/offbeat-desktop.png` and `/tmp/offbeat-mobile.png`. A mocked catalog test does not establish that Apple's live service is reachable.
@@ -90,6 +95,8 @@ The playback suite measures every requested clip duration using actual included 
 The artist-preview suite uses mocked catalog data and actual included audio to verify automatic lists without autoplay, artist identity filtering, Play/Pause/resume, the 15-second cutoff, switching songs, close/selection cleanup, empty and failed previews, retries, both artist search screens, and mobile layout. Its screenshots are `/tmp/offbeat-artist-previews-desktop.png` and `/tmp/offbeat-artist-previews-mobile.png`.
 
 The artist-library suite checks custom/random round choices, validation, complete sessions at different lengths, balanced artist selection, uniqueness, persistent likes and playlist edits, both shuffle actions, active-session snapshots, network failure recovery, and phone/tablet/desktop layouts. Catalog metadata is mocked, while playback uses the included audio. Screenshots are `/tmp/offbeat-library-mobile.png` and `/tmp/offbeat-liked-artists-mobile.png`.
+
+The scoped-search suite verifies artist/album membership, combined genre/era filtering, playlist snapshots, full-pool suggestions beyond a one-round session, cached search, local/demo and unrestricted catalog modes, stale-response protection, and mobile layout. Catalog results deliberately include unrelated artists and releases to check they are excluded. Metadata is mocked and any playback uses local audio. Its screenshot is `/tmp/offbeat-scoped-search-mobile.png`.
 
 ## Assets
 
