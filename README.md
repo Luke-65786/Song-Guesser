@@ -38,7 +38,7 @@ The top **Find your mix** bar lets you combine an **Era** (1960s–2020s), **Gen
 
 All selected filters must match. Artist and album IDs determine membership, and decades use catalog release dates (which can differ for reissues). Discovery mixes sample catalog searches around artists in the selected era/genre; they are not an exhaustive list of all matching songs. Sessions contain up to five available previews. An empty combination asks you to broaden the filters rather than substituting unrelated songs. The interface always uses the dark theme, including native inputs and dialogs, regardless of system preferences.
 
-Clips unlock at 1, 2, 4, 7, 11, and 16 seconds. Correct answers earn 1,000, 800, 600, 400, 250, or 100 points respectively. A hint deducts 150 points, with a minimum award of 50. Replay a clip freely, submit a typed title or pick a search result, and skip to unlock more audio. After six attempts, the song is revealed. Completed-session stats are stored in this browser's localStorage. Local libraries and in-progress sessions do not persist after reload.
+Clips unlock at **0.1, 0.5, 1, 3, 5, 10, and 15 seconds**. Correct answers earn 1,000, 900, 800, 600, 400, 250, or 100 points respectively. A hint deducts 150 points, with a minimum award of 50. Replay a clip freely, submit a typed title or pick a search result, and skip to unlock more audio. After seven attempts, the song is revealed; replays after a reveal are capped at 15 seconds. Playback is a single progress line with fractional time labels, and the session/leaderboard sidebar is hidden. Personal stats remain available through **Your stats**. Completed-session stats are stored in this browser's localStorage. Local libraries and in-progress sessions do not persist after reload.
 
 Keyboard support: `/` focuses the guess input, arrow keys navigate search results, Enter selects or submits, and Escape closes a dialog or suggestions. Reduced motion and mobile layouts are supported.
 
@@ -65,11 +65,14 @@ For browser integration tests, run the app in a second terminal and use an envir
 ```sh
 python3 scripts/browser-smoke.py
 python3 scripts/browser-filters.py
+python3 scripts/browser-playback.py
 ```
 
 Override `CHROMIUM_PATH` or `OFFBEAT_TEST_URL` if needed. These tests play real local audio and exercise sessions, timing, uploads, saved stats, network failure recovery, desktop/mobile layouts, and a **mocked** catalog response. Screenshots are written to `/tmp/offbeat-desktop.png` and `/tmp/offbeat-mobile.png`. A mocked catalog test does not establish that Apple's live service is reachable.
 
 The filter suite additionally checks combined and individual filters, album/artist consistency, reset, empty results, picker failures, preserving an active session, and dark styling with a light system preference. Its screenshots are `/tmp/offbeat-dark-desktop.png` and `/tmp/offbeat-dark-mobile.png`. The same suite can validate a GitHub Pages-style subpath by setting `OFFBEAT_TEST_URL` to a static server's project URL.
+
+The playback suite measures every requested clip duration using actual included audio, checks fractional labels and the line progress display, verifies seven chances and a 15-second reveal cap, and checks that the session panel is hidden on desktop and mobile. Its screenshots are `/tmp/offbeat-line-desktop.png` and `/tmp/offbeat-line-mobile.png`. Playback uses a media-clock cutoff timer alongside visual updates; timing is subject to browser scheduling.
 
 ## Assets
 

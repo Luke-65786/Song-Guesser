@@ -1,12 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CLIP_LENGTHS, DEMO_SONGS, normalize, isCorrect, pointsFor, shuffle, catalogSongs, trackFromFile } from '../public/game.js';
+import { CLIP_LENGTHS, MAX_CLIP_LENGTH, formatTime, DEMO_SONGS, normalize, isCorrect, pointsFor, shuffle, catalogSongs, trackFromFile } from '../public/game.js';
 
-test('six increasingly long clips and descending point values', () => {
-  assert.deepEqual(CLIP_LENGTHS, [1, 2, 4, 7, 11, 16]);
-  assert.deepEqual(CLIP_LENGTHS.map((_, i) => pointsFor(i)), [1000, 800, 600, 400, 250, 100]);
+test('seven requested clip lengths and descending point values', () => {
+  assert.deepEqual(CLIP_LENGTHS, [0.1, 0.5, 1, 3, 5, 10, 15]);
+  assert.equal(MAX_CLIP_LENGTH, 15);
+  assert.deepEqual(CLIP_LENGTHS.map((_, i) => pointsFor(i)), [1000, 900, 800, 600, 400, 250, 100]);
   assert.equal(pointsFor(0, true), 850);
-  assert.equal(pointsFor(5, true), 50);
+  assert.equal(pointsFor(6, true), 50);
+  assert.equal(pointsFor(99), 100);
+});
+test('playback times display fractions without rounding a 0.1s clip to zero', () => {
+  assert.equal(formatTime(0), '0:00.0');
+  assert.equal(formatTime(0.1), '0:00.1');
+  assert.equal(formatTime(0.5), '0:00.5');
+  assert.equal(formatTime(1), '0:01.0');
+  assert.equal(formatTime(15), '0:15.0');
+  assert.equal(formatTime(-1), '0:00.0');
 });
 test('typed guesses accept punctuation, accents, and version labels', () => {
   const song = { id: '1', title: 'Déjà Vu (Remastered)', artist: 'Beyoncé' };

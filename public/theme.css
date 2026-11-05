@@ -178,3 +178,20 @@ dialog::backdrop { background: #050903b3; }
   .toolbar-heading div > span { font-size: 7px; }
   .mix-label span:first-of-type { max-width: 155px; }
 }
+
+/* A single playback line, with the session/leaderboard column hidden. */
+.play-layout { grid-template-columns: minmax(0, 1fr); }
+.playback-area { flex: 1; min-width: 0; }
+.playback-line { height: 3px; width: 100%; border-radius: 2px; overflow: hidden; background: #49583b; margin: 10px 0 17px; }
+#playback-progress { display: block; height: 100%; width: 0; background: var(--orange); }
+.wave-caption { font-size: 10px; }
+.clip-steps { gap: 7px; }
+.clip-step, .clip-step.completed { border: 0; border-radius: 5px; padding: 8px 4px; font-size: 10px; color: #a9bb94; background: transparent; }
+.clip-step.active { color: #ffb995; background: #493423; }
+.attempt-line { margin-top: 16px; }
+@media (max-width: 700px) {
+  .wave-caption { font-size: 8px; align-items: flex-end; }
+  .wave-caption > span:first-child { max-width: 56%; line-height: 1.6; }
+  .clip-steps { gap: 3px; }
+  .clip-step, .clip-step.completed { font-size: 9px; padding: 8px 2px; }
+}

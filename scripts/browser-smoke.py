@@ -21,7 +21,7 @@ TRACKS = {
 def listen(page):
     page.locator('#play-button').click()
     page.wait_for_function("document.querySelector('#audio').currentTime > 0.08")
-    assert page.locator('#audio').evaluate('(a) => a.duration') > 16
+    assert page.locator('#audio').evaluate('(a) => a.duration') > 15
 
 def guess_current(page):
     source = page.locator('#audio').get_attribute('src')
@@ -47,18 +47,18 @@ with sync_playwright() as p:
     expect(page.locator('#mix-label')).to_have_text('The offline demo')
     listen(page)
     page.wait_for_function("document.querySelector('#audio').paused")
-    assert page.locator('#audio').evaluate('(a) => a.currentTime') < 1.3
+    assert 0.1 <= page.locator('#audio').evaluate('(a) => a.currentTime') < 0.2
     page.locator('#hint-button').click()
     expect(page.locator('#available-points')).to_have_text('850')
     page.locator('#guess-input').fill('Definitely Not The Song')
     page.locator('#guess-button').click()
-    expect(page.locator('#attempt-label')).to_have_text('GUESS 2 OF 6')
-    expect(page.locator('#available-points')).to_have_text('650')
+    expect(page.locator('#attempt-label')).to_have_text('GUESS 2 OF 7')
+    expect(page.locator('#available-points')).to_have_text('750')
     guess_current(page)
-    expect(page.locator('#score')).to_have_text('650')
+    expect(page.locator('#score')).to_have_text('750')
     page.locator('#next-button').click()
     listen(page)
-    for _ in range(6):
+    for _ in range(7):
         page.locator('#skip-button').click()
     expect(page.locator('#result')).to_contain_text('ONE FOR YOUR PLAYLIST')
     expect(page.locator('#streak')).to_contain_text('0')
@@ -66,13 +66,13 @@ with sync_playwright() as p:
         page.locator('#next-button').click()
         listen(page)
         guess_current(page)
-    expect(page.locator('#score')).to_have_text('3,650')
+    expect(page.locator('#score')).to_have_text('3,750')
     page.locator('#next-button').click()
     expect(page.locator('#modal')).to_be_visible()
     expect(page.locator('#modal-body')).to_contain_text('4/5')
     data = page.evaluate("JSON.parse(localStorage.getItem('offbeat-stats-v1'))")
-    assert data == {'games': 1, 'correct': 4, 'rounds': 5, 'bestScore': 3650, 'bestStreak': 3}, data
-    print('PASS: complete session, real audio, clip cutoff, hints, six attempts, scoring, streaks, and results')
+    assert data == {'games': 1, 'correct': 4, 'rounds': 5, 'bestScore': 3750, 'bestStreak': 3}, data
+    print('PASS: complete session, real audio, clip cutoff, hints, seven attempts, scoring, streaks, and results')
 
     # Stats persist across page loads. Keyboard shortcut and dialogs work.
     page.reload(wait_until='networkidle')

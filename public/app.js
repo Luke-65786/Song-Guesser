@@ -1,4 +1,4 @@
-import { CLIP_LENGTHS, DEMO_SONGS, normalize, isCorrect, pointsFor, shuffle, catalogSongs, trackFromFile } from './game.js';
+import { CLIP_LENGTHS, MAX_CLIP_LENGTH, formatTime, DEMO_SONGS, normalize, isCorrect, pointsFor, shuffle, catalogSongs, trackFromFile } from './game.js';
 import { catalogRequest, catalogSearch, catalogLookup } from './catalog.js';
 import { ERAS, GENRES, emptyFilters, filterLabel, filterSongs, discoveryTerms } from './filters.js';
 
@@ -10,6 +10,7 @@ const modal = $('#modal');
 const state = { mode: 'everything', label: 'The everything mix', artist: '', filters: emptyFilters(), deck: [], round: 0, attempt: 0, hinted: false, revealed: false, listened: false, results: [], score: 0, streak: 0, maxStreak: 0, loading: false, selected: null, suggestions: [], localTracks: [], generation: 0, finished: false, searchGeneration: 0 };
 let filterDraft = emptyFilters();
 let playFrame;
+let clipTimer;
 let searchTimer;
 let toastTimer;
 let searchIndex = -1;
@@ -96,12 +97,13 @@ async function prepareDeck() {
   return task;
 }
 
-function renderWave() {
-  const count = window.innerWidth < 701 ? 43 : 62;
-  $('#waveform').innerHTML = Array.from({ length: count }, (_, i) => {
-    const height = 7 + Math.abs(Math.sin(i * 1.76) * Math.cos(i * .39)) * 31 + (i % 4) * 1.5;
-    return `<span class="wave-bar${i / count < CLIP_LENGTHS[state.attempt] / 16 ? ' unlocked' : ''}" style="height:${height}px"></span>`;
-  }).join('');
+function renderPlayback(position = 0, limit = state.revealed ? MAX_CLIP_LENGTH : CLIP_LENGTHS[state.attempt]) {
+  const elapsed = Math.min(limit, Math.max(0, position));
+  $('#playback-progress').style.width = `${elapsed / limit * 100}%`;
+  $('#playback-line').setAttribute('aria-valuemax', String(limit));
+  $('#playback-line').setAttribute('aria-valuenow', String(Math.round(elapsed * 100) / 100));
+  $('#playback-line').setAttribute('aria-valuetext', `${Math.round(elapsed * 10) / 10} of ${limit} seconds played`);
+  $('#audio-time').innerHTML = `${formatTime(elapsed)} <span>/ ${formatTime(limit)}</span>`;
 }
 function renderSession() {
   $('#score').textContent = state.score.toLocaleString();
@@ -137,15 +139,16 @@ function renderRound() {
 }
 function updateAttempt() {
   $('#available-points').textContent = currentPoints().toLocaleString();
-  $('#attempt-label').textContent = `GUESS ${state.attempt + 1} OF 6`;
-  $('#skip-button span').textContent = state.attempt === 5 ? '(reveal song)' : `(+${CLIP_LENGTHS[state.attempt + 1] - CLIP_LENGTHS[state.attempt]} ${CLIP_LENGTHS[state.attempt + 1] - CLIP_LENGTHS[state.attempt] === 1 ? 'second' : 'seconds'})`;
-  $$('.clip-step').forEach((el, i) => { el.classList.toggle('active', i === state.attempt); el.classList.toggle('completed', i < state.attempt); });
-  $('#audio-time').innerHTML = `0:00 <span>/ 0:${String(CLIP_LENGTHS[state.attempt]).padStart(2, '0')}</span>`;
-  renderWave();
+  $('#attempt-label').textContent = `GUESS ${state.attempt + 1} OF ${CLIP_LENGTHS.length}`;
+  const nextLength = CLIP_LENGTHS[state.attempt + 1];
+  const increment = nextLength == null ? 0 : Number((nextLength - CLIP_LENGTHS[state.attempt]).toFixed(1));
+  $('#skip-button span').textContent = state.attempt === CLIP_LENGTHS.length - 1 ? '(reveal song)' : `(+${increment} ${increment === 1 ? 'second' : 'seconds'})`;
+  $('#clip-steps').innerHTML = CLIP_LENGTHS.map((seconds, i) => `<div role="listitem" class="clip-step${i === state.attempt ? ' active' : i < state.attempt ? ' completed' : ''}"${i === state.attempt ? ' aria-current="step"' : ''}><span>${seconds}s</span></div>`).join('');
+  renderPlayback();
 }
 function $$(selector) { return [...document.querySelectorAll(selector)]; }
 function stopAudio() {
-  playGeneration++; cancelAnimationFrame(playFrame); audio.pause();
+  playGeneration++; cancelAnimationFrame(playFrame); clearTimeout(clipTimer); audio.pause();
   $('#audio-player').classList.remove('is-playing');
   $('#play-button').setAttribute('aria-label', 'Play song clip');
 }
@@ -174,13 +177,24 @@ async function playClip() {
     $('#audio-player').classList.add('is-playing');
     $('#play-button').setAttribute('aria-label', 'Pause song clip');
     $('#play-caption').textContent = state.revealed ? 'One more listen. This one’s a keeper.' : 'Listen close. You know more than you think.';
+    const limit = state.revealed ? MAX_CLIP_LENGTH : CLIP_LENGTHS[state.attempt];
+    const finishClip = () => {
+      renderPlayback(audio.currentTime, limit); stopAudio();
+      $('#play-caption').textContent = 'Got it? Make your guess. Or listen again.';
+    };
+    // A separate media-clock check keeps 0.1s/0.5s cutoffs independent of frame rate.
+    const checkCutoff = () => {
+      if (token !== playGeneration) return;
+      const remaining = limit - audio.currentTime;
+      if (remaining <= 0 || audio.ended) { finishClip(); return; }
+      clipTimer = setTimeout(checkCutoff, Math.max(1, remaining * 1000));
+    };
+    checkCutoff();
     const tick = () => {
       if (token !== playGeneration) return;
-      const limit = state.revealed ? 16 : CLIP_LENGTHS[state.attempt];
       const position = audio.currentTime;
-      $('#audio-time').innerHTML = `0:${String(Math.min(Math.floor(position), limit)).padStart(2, '0')} <span>/ 0:${String(limit).padStart(2, '0')}</span>`;
-      $$('.wave-bar').forEach((bar, i, bars) => { bar.classList.toggle('played', i / bars.length < position / 16); });
-      if (position >= limit || audio.ended) { stopAudio(); $('#play-caption').textContent = 'Got it? Make your guess. Or listen again.'; return; }
+      renderPlayback(position, limit);
+      if (position >= limit || audio.ended) { finishClip(); return; }
       playFrame = requestAnimationFrame(tick);
     };
     tick();
@@ -268,7 +282,7 @@ $('#guess-form').addEventListener('submit', async event => {
   else {
     const title = typeof guess === 'object' ? guess.title : guess;
     $('#guess-input').value = ''; state.selected = null;
-    if (state.attempt === 5) reveal(false);
+    if (state.attempt === CLIP_LENGTHS.length - 1) reveal(false);
     else { state.attempt++; updateAttempt(); $('#feedback').textContent = `“${title}” isn’t the one. You’ve unlocked ${CLIP_LENGTHS[state.attempt]} seconds. Give it another listen.`; updateControls(); }
   }
 });
@@ -276,7 +290,7 @@ $('#skip-button').addEventListener('click', async () => {
   if (state.revealed || state.loading) return;
   if (!target()) { $('#feedback').textContent = 'Press play to start your first song.'; return; }
   stopAudio(); closeSuggestions();
-  if (state.attempt === 5) reveal(false);
+  if (state.attempt === CLIP_LENGTHS.length - 1) reveal(false);
   else { state.attempt++; updateAttempt(); $('#play-caption').textContent = 'A little more to go on. Press play.'; $('#feedback').textContent = `${CLIP_LENGTHS[state.attempt]} seconds unlocked. The next guess is worth ${currentPoints().toLocaleString()} points.`; updateControls(); }
 });
 $('#hint-button').addEventListener('click', () => {
@@ -302,7 +316,7 @@ function reveal(correct) {
   $('#game-title').textContent = correct ? 'Look at those listening skills.' : 'Good music. Even when it gets you.';
   $('#game-subtitle').textContent = correct ? `You got it in ${CLIP_LENGTHS[state.attempt]} ${CLIP_LENGTHS[state.attempt] === 1 ? 'second' : 'seconds'}. Nicely done.` : 'Save that one to your memory. There’s always another song.';
   $('#play-caption').textContent = 'Play the longer clip. You’ve earned it.';
-  $('#audio-time').innerHTML = '0:00 <span>/ 0:16</span>';
+  renderPlayback();
   renderSession(); updateControls(); $('#next-button').focus({ preventScroll: true });
 }
 $('#next-button').addEventListener('click', () => {
@@ -479,7 +493,7 @@ modal.addEventListener('close', () => {
   uploading = [];
 });
 function showHow() {
-  openModal(`<h2 id="modal-title">A little sound. A big clue.</h2><p>No lyrics on the screen. No album cover to give it away.<br>Just you, your ears, and that “I know this” feeling.</p><div class="how-step"><span class="step-number">01</span><div><strong>Press play. Listen close.</strong><p>You start with a one-second clip. Replay it as often as you like.</p></div></div><div class="how-step"><span class="step-number">02</span><div><strong>Name that song.</strong><p>Type the title, or search and pick a match. Get it in one second for 1,000 points.</p></div></div><div class="how-step"><span class="step-number">03</span><div><strong>Need another beat?</strong><p>Skip or guess wrong to unlock 2, 4, 7, 11, then 16 seconds. Longer clips mean fewer points. A hint costs 150 points, with a 50-point minimum.</p></div></div><div class="modal-note">Five songs per session, six chances per song. Your stats are saved in this browser after a full session. Press <b>/</b> to jump to the search box.</div><button class="primary-button modal-full-button" data-action="close">Let’s play ${icon('arrow')}</button>`);
+  openModal(`<h2 id="modal-title">A little sound. A big clue.</h2><p>No lyrics on the screen. No album cover to give it away.<br>Just you, your ears, and that “I know this” feeling.</p><div class="how-step"><span class="step-number">01</span><div><strong>Press play. Listen close.</strong><p>You start with a 0.1-second clip. Replay it as often as you like.</p></div></div><div class="how-step"><span class="step-number">02</span><div><strong>Name that song.</strong><p>Type the title, or search and pick a match. Get it in 0.1 seconds for 1,000 points.</p></div></div><div class="how-step"><span class="step-number">03</span><div><strong>Need another beat?</strong><p>Skip or guess wrong to unlock 0.5, 1, 3, 5, 10, then 15 seconds. Longer clips mean fewer points. A hint costs 150 points, with a 50-point minimum.</p></div></div><div class="modal-note">Five songs per session, seven chances per song. Your stats are saved in this browser after a full session. Press <b>/</b> to jump to the search box.</div><button class="primary-button modal-full-button" data-action="close">Let’s play ${icon('arrow')}</button>`);
 }
 function showStats() {
   openModal(`<h2 id="modal-title">Your listening history.</h2><p>A little proof that you know your music.<br>Stats from completed sessions on this browser.</p><div class="stats-grid"><div class="stat-box"><strong>${stats.games}</strong><span>Sessions played</span></div><div class="stat-box"><strong>${stats.rounds ? Math.round(stats.correct / stats.rounds * 100) : 0}%</strong><span>Songs guessed correctly</span></div><div class="stat-box"><strong>${stats.bestScore.toLocaleString()}</strong><span>Personal best score</span></div><div class="stat-box"><strong>${stats.bestStreak}</strong><span>Best song streak</span></div></div><div class="modal-note">${stats.games ? `${stats.correct} of ${stats.rounds} songs guessed. Keep the good music going.` : 'Your first session is waiting. Finish a mix and your numbers will appear here.'}</div><button class="primary-button modal-full-button" data-action="close">Back to the music ${icon('arrow')}</button>`);
@@ -528,5 +542,4 @@ document.addEventListener('click', async event => {
   }
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { stopAudio(); demoAudio?.pause(); } });
-window.addEventListener('resize', renderWave);
 renderRound();

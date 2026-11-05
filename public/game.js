@@ -1,4 +1,11 @@
-export const CLIP_LENGTHS = Object.freeze([1, 2, 4, 7, 11, 16]);
+export const CLIP_LENGTHS = Object.freeze([0.1, 0.5, 1, 3, 5, 10, 15]);
+export const MAX_CLIP_LENGTH = CLIP_LENGTHS.at(-1);
+const POINTS = [1000, 900, 800, 600, 400, 250, 100];
+
+export function formatTime(seconds) {
+  const tenths = Math.round(Math.max(0, seconds) * 10);
+  return `${Math.floor(tenths / 600)}:${(tenths % 600 / 10).toFixed(1).padStart(4, '0')}`;
+}
 export const DEMO_SONGS = Object.freeze([
   { id: 'demo-1', title: 'Neon Avenue', artist: 'Offbeat Originals', genre: 'Synth pop', year: '2026', preview: new URL('./audio/neon-avenue.wav', import.meta.url).href, demo: true },
   { id: 'demo-2', title: 'Sunday Somewhere', artist: 'Offbeat Originals', genre: 'Lo-fi', year: '2026', preview: new URL('./audio/sunday-somewhere.wav', import.meta.url).href, demo: true },
@@ -17,7 +24,7 @@ export function isCorrect(guess, target) {
   return !!text && [normalize(target.title), normalize(`${target.artist} ${target.title}`), normalize(`${target.title} ${target.artist}`)].includes(text);
 }
 export function pointsFor(attempt, hinted = false) {
-  return Math.max(50, [1000, 800, 600, 400, 250, 100][Math.min(5, Math.max(0, attempt))] - (hinted ? 150 : 0));
+  return Math.max(50, POINTS[Math.min(POINTS.length - 1, Math.max(0, attempt))] - (hinted ? 150 : 0));
 }
 export function shuffle(items, random = Math.random) {
   const result = [...items];

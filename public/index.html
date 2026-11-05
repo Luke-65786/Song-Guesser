@@ -52,7 +52,7 @@
       <div class="filter-footer"><span id="filter-status" role="status">Pick a decade, a genre, or a favorite. Mix them together.</span><button type="button" id="reset-filters">Reset filters</button></div>
     </section>
     <section class="hero" aria-labelledby="hero-title">
-      <div class="hero-copy"><div class="eyebrow"><span class="tiny-spark">✳</span> SMALL CLIPS. BIG MUSIC ENERGY.</div><h1 id="hero-title">You know the song.<br>But how <span class="accent-word">soon<svg viewBox="0 0 190 15" aria-hidden="true"><path d="M3 10C55 1 122 2 185 6M12 14c54-7 111-7 160-5"/></svg></span>?</h1><p>Put your ears to the test. One second might be all you need.</p></div>
+      <div class="hero-copy"><div class="eyebrow"><span class="tiny-spark">✳</span> SMALL CLIPS. BIG MUSIC ENERGY.</div><h1 id="hero-title">You know the song.<br>But how <span class="accent-word">soon<svg viewBox="0 0 190 15" aria-hidden="true"><path d="M3 10C55 1 122 2 185 6M12 14c54-7 111-7 160-5"/></svg></span>?</h1><p>Put your ears to the test. Start with just 0.1 seconds.</p></div>
       <div class="hero-art" aria-hidden="true"><span class="art-spark spark-one">✳</span><span class="art-spark spark-two">+</span><div class="album-sleeve"><span class="sleeve-top">OFFBEAT RECORDS</span><div class="sleeve-circle"></div><span class="sleeve-bottom">FOR THE LOVE<br>OF THE FIRST NOTE.</span><span class="sleeve-number">VOL.<br><b>01</b></span></div><div class="vinyl"><div class="vinyl-label"><svg><use href="#i-logo"/></svg><i></i></div></div><span class="art-caption">less thinking, more listening.</span><svg class="art-arrow" viewBox="0 0 100 50"><path d="M4 37c42 22 74-3 70-29m-8 9 8-11 9 12"/></svg></div>
     </section>
 
@@ -63,23 +63,23 @@
 
         <div class="audio-player" id="audio-player">
           <button class="play-button" id="play-button" aria-label="Play song clip"><svg class="play-symbol" viewBox="0 0 24 24"><path d="m9 5 11 7-11 7Z"/></svg><svg class="pause-symbol" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg><span class="loading-spinner"></span></button>
-          <div class="wave-area"><div class="waveform" id="waveform" aria-hidden="true"></div><div class="wave-caption"><span id="play-caption">Press play. Find your first clue.</span><span id="audio-time">0:00 <span>/ 0:01</span></span></div></div>
+          <div class="playback-area"><div class="playback-line" id="playback-line" role="progressbar" aria-label="Song clip playback" aria-valuemin="0" aria-valuemax="0.1" aria-valuenow="0"><span id="playback-progress"></span></div><div class="wave-caption"><span id="play-caption">Press play. Find your first clue.</span><span id="audio-time">0:00.0 <span>/ 0:00.1</span></span></div></div>
           <button class="volume-button" id="mute-button" aria-label="Mute audio" aria-pressed="false"><svg><use href="#i-volume"/></svg></button>
         </div>
-        <div class="clip-steps" id="clip-steps" aria-label="Clip lengths"><div class="clip-step active"><span>1s</span></div><div class="clip-step"><span>2s</span></div><div class="clip-step"><span>4s</span></div><div class="clip-step"><span>7s</span></div><div class="clip-step"><span>11s</span></div><div class="clip-step"><span>16s</span></div></div>
-        <div class="attempt-line"><span id="attempt-label">GUESS 1 OF 6</span><span>Each skip unlocks a little more.</span></div>
+        <div class="clip-steps" id="clip-steps" role="list" aria-label="Clip lengths"></div>
+        <div class="attempt-line"><span id="attempt-label">GUESS 1 OF 7</span><span>Each skip unlocks a little more.</span></div>
 
         <div id="result" class="result" hidden aria-live="polite"></div>
         <form id="guess-form" autocomplete="off">
           <label class="sr-only" for="guess-input">Song title or artist</label>
           <div class="guess-row"><div class="search-wrap"><svg><use href="#i-search"/></svg><input id="guess-input" placeholder="Know it? Search for a song or artist…" role="combobox" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false" maxlength="150"><kbd>/</kbd><div id="suggestions" class="suggestions" role="listbox" aria-label="Song suggestions" hidden></div></div><button class="primary-button" id="guess-button" type="submit">Guess <svg><use href="#i-arrow"/></svg></button></div>
-          <div class="game-bottom"><button class="text-button" id="hint-button" type="button"><svg><use href="#i-bulb"/></svg>Need a hint?<span>−150 pts</span></button><button class="skip-button" id="skip-button" type="button">Skip <span>(+1 second)</span><svg><use href="#i-skip"/></svg></button></div>
+          <div class="game-bottom"><button class="text-button" id="hint-button" type="button"><svg><use href="#i-bulb"/></svg>Need a hint?<span>−150 pts</span></button><button class="skip-button" id="skip-button" type="button">Skip <span>(+0.4 seconds)</span><svg><use href="#i-skip"/></svg></button></div>
         </form>
         <div id="feedback" class="feedback" role="status" aria-live="polite"></div>
         <button class="primary-button next-button" id="next-button" hidden>Next song <svg><use href="#i-arrow"/></svg></button>
       </div>
 
-      <aside class="session-column" aria-label="Session progress">
+      <aside class="session-column" aria-label="Session progress" hidden>
         <div class="session-card"><div class="section-label">YOUR SESSION <span class="session-dot"></span></div><div class="session-stats"><div><span><svg><use href="#i-star"/></svg> Score</span><strong id="score">0</strong></div><div><span><svg><use href="#i-fire"/></svg> Streak</span><strong id="streak">0<span> songs</span></strong></div></div><div class="round-list" id="round-list"></div><div class="session-footer"><svg><use href="#i-headphones"/></svg> Five songs. Infinite bragging rights.</div></div>
         <div class="tip-card"><span class="tip-icon">✳</span><div><strong>A tip for your ears</strong><p>Headphones on. World off.<br>Sometimes it’s all in the bassline.</p></div></div>
       </aside>
