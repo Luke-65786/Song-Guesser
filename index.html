@@ -84,7 +84,8 @@
         <div id="result" class="result" hidden aria-live="polite"></div>
         <form id="guess-form" autocomplete="off">
           <label class="sr-only" for="guess-input">Song title or artist</label>
-          <div class="guess-row"><div class="search-wrap"><svg><use href="#i-search"/></svg><input id="guess-input" placeholder="Song title or artist…" role="combobox" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false" maxlength="150"><kbd>/</kbd><div id="suggestions" class="suggestions" role="listbox" aria-label="Song suggestions" hidden></div></div><button class="primary-button" id="guess-button" type="submit">Guess <svg><use href="#i-arrow"/></svg></button></div>
+          <div class="guess-row"><div class="search-wrap"><svg><use href="#i-search"/></svg><input id="guess-input" placeholder="Song title or artist…" role="combobox" aria-autocomplete="list" aria-controls="suggestions" aria-describedby="search-scope" aria-expanded="false" maxlength="150"><kbd>/</kbd><div id="suggestions" class="suggestions" role="listbox" aria-label="Song suggestions" hidden></div></div><button class="primary-button" id="guess-button" type="submit">Guess <svg><use href="#i-arrow"/></svg></button></div>
+          <p id="search-scope" class="search-scope">Search all songs · Apply a mix or shuffle a playlist to narrow results</p>
           <div class="game-bottom"><button class="text-button" id="hint-button" type="button"><svg><use href="#i-bulb"/></svg>Need a hint?<span>−150 pts</span></button><button class="skip-button" id="skip-button" type="button">Skip <span>(+0.4 seconds)</span><svg><use href="#i-skip"/></svg></button></div>
         </form>
         <div id="feedback" class="feedback" role="status" aria-live="polite"></div>
