@@ -25,7 +25,7 @@ export function shuffle(items, random = Math.random) {
   return result;
 }
 export function fromCatalog(result) {
-  return { id: String(result.trackId), title: result.trackName, artist: result.artistName, genre: result.primaryGenreName || 'Music', year: result.releaseDate?.slice(0, 4) || 'Unknown year', preview: result.previewUrl, artwork: result.artworkUrl100, url: result.trackViewUrl };
+  return { id: String(result.trackId), title: result.trackName, artist: result.artistName, artistId: result.artistId == null ? null : String(result.artistId), album: result.collectionName || '', albumId: result.collectionId == null ? null : String(result.collectionId), genre: result.primaryGenreName || 'Music', year: result.releaseDate?.slice(0, 4) || 'Unknown year', preview: result.previewUrl, artwork: result.artworkUrl100, url: result.trackViewUrl };
 }
 export function catalogSongs(results) {
   const seen = new Set();
