@@ -62,9 +62,13 @@ with sync_playwright() as p:
     assert page.evaluate("getComputedStyle(document.documentElement).colorScheme") == 'dark'
     for selector in ['body', '.game-card', '.session-card', '.mix-toolbar']:
         color = page.locator(selector).evaluate('(el) => getComputedStyle(el).backgroundColor')
-        assert color in ['rgb(17, 20, 16)', 'rgb(26, 32, 23)'], (selector, color)
+        assert color in ['rgb(28, 31, 38)', 'rgb(41, 44, 56)'], (selector, color)
+    assert page.locator('#guess-input').evaluate('(el) => parseFloat(getComputedStyle(el).fontSize)') >= 16
+    assert page.locator('#skip-button').bounding_box()['height'] >= 56
+    assert page.locator('#skip-button').evaluate('(el) => parseFloat(getComputedStyle(el).borderTopWidth)') >= 1
+    assert page.locator('#skip-button').evaluate('(el) => getComputedStyle(el).backgroundColor') != 'rgba(0, 0, 0, 0)'
     page.screenshot(path='/tmp/offbeat-dark-desktop.png', full_page=True)
-    print('PASS: dark-only theme even with a light system preference')
+    print('PASS: charcoal/lavender dark theme, larger input text, and a filled Skip button')
 
     page.locator('#era-filter').select_option('1980')
     page.locator('#genre-filter').select_option('rock')
