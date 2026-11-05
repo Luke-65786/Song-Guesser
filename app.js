@@ -1,12 +1,14 @@
 import { CLIP_LENGTHS, MAX_CLIP_LENGTH, formatTime, DEMO_SONGS, normalize, isCorrect, pointsFor, shuffle, catalogSongs, trackFromFile } from './game.js';
 import { catalogRequest, catalogSearch, catalogLookup } from './catalog.js';
 import { ERAS, GENRES, emptyFilters, filterLabel, filterSongs, discoveryTerms } from './filters.js';
+import { createSongPreviews } from './song-previews.js';
 
 const $ = selector => document.querySelector(selector);
 const icon = name => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
 const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const audio = $('#audio');
 const modal = $('#modal');
+const songPreviews = createSongPreviews($('#artist-preview-audio'), () => { stopAudio(); demoAudio?.pause(); clearTimeout(demoTimer); $('#artist-preview-audio').muted = audio.muted; });
 const state = { mode: 'everything', label: 'The everything mix', artist: '', filters: emptyFilters(), deck: [], round: 0, attempt: 0, hinted: false, revealed: false, listened: false, results: [], score: 0, streak: 0, maxStreak: 0, loading: false, selected: null, suggestions: [], localTracks: [], generation: 0, finished: false, searchGeneration: 0 };
 let filterDraft = emptyFilters();
 let playFrame;
@@ -38,8 +40,8 @@ function toast(message) { clearTimeout(toastTimer); $('#toast').textContent = me
 function target() { return state.deck[state.round]; }
 function roundCount() { return state.deck.length || Math.min(5, state.mode === 'local' ? state.localTracks.length : 5); }
 function currentPoints() { return pointsFor(state.attempt, state.hinted); }
-function openModal(html) { stopAudio(); demoAudio?.pause(); clearTimeout(demoTimer); pickerGeneration++; clearTimeout(pickerTimer); $('#modal-body').innerHTML = html; if (!modal.open) modal.showModal(); }
-function closeModal() { modal.close(); }
+function openModal(html) { stopAudio(); songPreviews.stop(); demoAudio?.pause(); clearTimeout(demoTimer); pickerGeneration++; clearTimeout(pickerTimer); $('#modal-body').innerHTML = html; if (!modal.open) modal.showModal(); }
+function closeModal() { songPreviews.stop(); modal.close(); }
 function statusText(text) { const el = $('#modal-status'); if (el) el.textContent = text; }
 
 async function prepareDeck() {
@@ -380,6 +382,7 @@ function showFilterPicker(kind) {
   const form = $('#filter-picker-form');
   const input = $('#filter-picker-query');
   const search = async () => {
+    songPreviews.stop();
     const query = input.value.trim();
     const request = ++pickerGeneration;
     const valid = () => modal.open && form.isConnected && request === pickerGeneration;
@@ -398,19 +401,49 @@ function showFilterPicker(kind) {
         .map(record => album ? { id: String(record.collectionId), title: record.collectionName, artist: record.artistName, artistId: String(record.artistId), year: record.releaseDate?.slice(0, 4) || '', genre: record.primaryGenreName || 'Album' } : { id: String(record.artistId), name: record.artistName, genre: record.primaryGenreName || 'Artist' })
         .filter(item => { if (seen.has(item.id)) return false; seen.add(item.id); return !album || !filterDraft.artist || (item.artistId === filterDraft.artist.id && (!query || normalize(item.title).includes(normalize(query)))); }).slice(0, 30);
       status.textContent = pickerResults.length ? `${pickerResults.length} ${album ? 'albums' : 'artists'} found. Choose one below.` : `No ${album ? 'albums' : 'artists'} found. Try a different name${album && filterDraft.artist ? ', or clear the artist filter' : ''}.`;
-      list.innerHTML = pickerResults.map((item, index) => `<button type="button" class="filter-result" data-pick-index="${index}"><span class="mix-card-icon ${album ? 'sage' : 'lilac'}">${icon('music')}</span><span><strong>${escape(album ? item.title : item.name)}</strong><small>${escape(album ? `${item.artist}${item.year ? ' · ' + item.year : ''}` : item.genre)}</small></span>${icon('arrow')}</button>`).join('');
+      list.innerHTML = pickerResults.map((item, index) => {
+        const pick = `<button type="button" class="filter-result" data-pick-index="${index}"><span class="mix-card-icon ${album ? 'sage' : 'lilac'}">${icon('music')}</span><span><strong>${escape(album ? item.title : item.name)}</strong><small>${escape(album ? `${item.artist}${item.year ? ' · ' + item.year : ''}` : item.genre)}</small></span>${icon('arrow')}</button>`;
+        return album ? pick : `<div class="artist-search-result">${pick}<button type="button" class="artist-preview-toggle" data-preview-artist="${index}" aria-label="Preview songs by ${escape(item.name)}" aria-expanded="false" aria-controls="artist-songs-${request}-${index}">${icon('headphones')}<span>Preview songs</span><span class="preview-toggle-chevron" aria-hidden="true">⌄</span></button><div class="artist-song-panel" id="artist-songs-${request}-${index}" hidden></div></div>`;
+      }).join('');
       list.querySelectorAll('[data-pick-index]').forEach(button => button.addEventListener('click', () => {
         const item = pickerResults[Number(button.dataset.pickIndex)];
         if (album) { filterDraft.album = item; filterDraft.artist = { id: item.artistId, name: item.artist }; }
         else { if (filterDraft.album?.artistId !== item.id) filterDraft.album = null; filterDraft.artist = item; }
         closeModal(); renderFilters(); $(`#${kind}-filter`).focus();
       }));
+      if (!album) {
+        const loadPanel = async (item, panel) => {
+          panel.innerHTML = '<p class="song-preview-status" role="status">Finding playable songs…</p>';
+          try {
+            const songs = catalogSongs(await catalogLookup(item.id)).filter(song => song.artistId === item.id);
+            if (!valid() || !panel.isConnected) return;
+            panel.dataset.loaded = 'true';
+            if (!songs.length) { panel.innerHTML = '<p class="song-preview-status" role="status">No playable previews are available for this artist. You can still select them to explore their albums.</p>'; return; }
+            songPreviews.render(panel, songs, item.name);
+          } catch {
+            if (!valid() || !panel.isConnected) return;
+            panel.innerHTML = '<p class="song-preview-status" role="status">Song previews couldn’t be loaded. Try again.</p><button type="button" class="outline-button preview-retry">Retry previews</button>';
+            panel.querySelector('.preview-retry').addEventListener('click', () => loadPanel(item, panel));
+          }
+        };
+        list.querySelectorAll('[data-preview-artist]').forEach(toggle => toggle.addEventListener('click', () => {
+          songPreviews.stop();
+          const panel = document.getElementById(toggle.getAttribute('aria-controls'));
+          const open = panel.hidden;
+          list.querySelectorAll('.artist-song-panel').forEach(element => { element.hidden = true; });
+          list.querySelectorAll('[data-preview-artist]').forEach(button => button.setAttribute('aria-expanded', 'false'));
+          if (!open) return;
+          panel.hidden = false; toggle.setAttribute('aria-expanded', 'true');
+          if (!panel.dataset.loaded) loadPanel(pickerResults[Number(toggle.dataset.previewArtist)], panel);
+        }));
+        list.querySelector('[data-preview-artist]')?.click();
+      }
     } catch {
       if (valid()) status.textContent = 'The catalog couldn’t be reached. Try again, or play your own tracks / the offline demo.';
     }
   };
   form.addEventListener('submit', event => { event.preventDefault(); clearTimeout(pickerTimer); search(); });
-  input.addEventListener('input', () => { pickerGeneration++; clearTimeout(pickerTimer); pickerTimer = setTimeout(search, 350); });
+  input.addEventListener('input', () => { songPreviews.stop(); pickerGeneration++; clearTimeout(pickerTimer); $('#filter-picker-results').innerHTML = ''; pickerTimer = setTimeout(search, 350); });
   input.addEventListener('keydown', event => { if (event.key === 'ArrowDown' && $('#filter-picker-results button')) { event.preventDefault(); $('#filter-picker-results button').focus(); } });
   $('#clear-picker').addEventListener('click', () => { filterDraft[kind] = null; if (!album) filterDraft.album = null; closeModal(); renderFilters(); $(`#${kind}-filter`).focus(); });
   input.focus();
@@ -435,7 +468,12 @@ function showMixes() {
   openModal(`<h2 id="modal-title">Find your frequency.</h2><p>All the music you love. A few seconds to prove it.</p><button class="mode-option" data-action="everything"><span class="mix-card-icon peach">${icon('shuffle')}</span><span><strong>The everything mix</strong><small>Big artists and familiar favorites. Always shuffled.</small></span>${icon('arrow')}</button><button class="mode-option" data-action="artist"><span class="mix-card-icon lilac">${icon('music')}</span><span><strong>Your favorite artist</strong><small>Build a challenge around any artist in the catalog.</small></span>${icon('arrow')}</button><button class="mode-option" data-action="upload"><span class="mix-card-icon sage">${icon('upload')}</span><span><strong>Bring your own tracks</strong><small>Pick audio files. Play any song in your library.</small></span>${icon('arrow')}</button><button class="mode-option" data-action="demo"><span class="mix-card-icon peach">${icon('headphones')}</span><span><strong>The offline demo</strong><small>Five original tunes. No connection needed.</small></span>${icon('arrow')}</button><div class="modal-note">Catalog games use short Apple iTunes previews. Availability varies by song and region. Your own audio stays on your device.</div>`);
 }
 function showArtist() {
-  openModal(`<h2 id="modal-title">How well do you know them?</h2><p>The hits. The deep cuts. The song you know by heart.<br>Choose an artist and we’ll make your mix.</p><form id="artist-form"><label class="field-label" for="artist-input">Artist name</label><div class="artist-form"><input id="artist-input" class="modal-input" placeholder="e.g. Taylor Swift" required maxlength="100"><button class="primary-button" type="submit">Find songs ${icon('arrow')}</button></div></form><div class="artist-chips"><button data-artist="Taylor Swift">Taylor Swift</button><button data-artist="The Weeknd">The Weeknd</button><button data-artist="Queen">Queen</button><button data-artist="BTS">BTS</button><button data-artist="Bad Bunny">Bad Bunny</button></div><div id="modal-status" class="modal-status" role="status"></div><div class="modal-note">We search the US iTunes catalog for songs with playable previews. No account or subscription needed.</div>`);
+  openModal(`<h2 id="modal-title">How well do you know them?</h2><p>The hits. The deep cuts. The song you know by heart.<br>Find an artist, preview their songs, then start your mix.</p><form id="artist-form"><label class="field-label" for="artist-input">Artist name</label><div class="artist-form"><input id="artist-input" class="modal-input" placeholder="e.g. Taylor Swift" required maxlength="100"><button class="primary-button" type="submit">Find songs ${icon('arrow')}</button></div></form><div class="artist-chips"><button data-artist="Taylor Swift">Taylor Swift</button><button data-artist="The Weeknd">The Weeknd</button><button data-artist="Queen">Queen</button><button data-artist="BTS">BTS</button><button data-artist="Bad Bunny">Bad Bunny</button></div><div id="modal-status" class="modal-status" role="status"></div><div id="artist-song-previews" class="artist-song-panel standalone-previews" hidden></div><button type="button" id="start-artist-mix" class="primary-button modal-full-button" hidden>Play this artist mix ${icon('arrow')}</button><div class="modal-note">We search the US iTunes catalog for songs with playable previews. No account or subscription needed.</div>`);
+  $('#artist-input').addEventListener('input', () => {
+    songPreviews.stop(); artistSearchGeneration++;
+    $('#artist-song-previews').hidden = true; $('#start-artist-mix').hidden = true;
+    $('#artist-form button').disabled = false; statusText('Search to preview this artist’s songs.');
+  });
   $('#artist-input').focus();
 }
 async function findArtist(artist) {
@@ -444,6 +482,7 @@ async function findArtist(artist) {
   if (!form) return;
   const request = ++artistSearchGeneration;
   const valid = () => form.isConnected && modal.open && request === artistSearchGeneration;
+  songPreviews.stop(); $('#artist-song-previews').hidden = true; $('#start-artist-mix').hidden = true;
   const button = form.querySelector('button'); button.disabled = true;
   statusText('Finding songs for your mix…');
   try {
@@ -452,11 +491,15 @@ async function findArtist(artist) {
     if (!songs.length) { statusText('No playable songs found. Try another artist or spelling.'); return; }
     const exact = songs.find(song => normalize(song.artist) === normalize(artist));
     const name = exact?.artist || songs[0].artist;
-    statusText(`${songs.length} playable songs found.`);
-    requestRestart('artist', `${name} mix`, name);
+    const matches = songs.filter(song => normalize(song.artist) === normalize(name));
+    statusText(`${matches.length} playable songs by ${name}. Listen below, then start your mix.`);
+    const previews = $('#artist-song-previews');
+    previews.hidden = false; songPreviews.render(previews, matches, name);
+    const start = $('#start-artist-mix');
+    start.hidden = false; start.onclick = () => requestRestart('artist', `${name} mix`, name);
   } catch {
     if (valid()) statusText('We couldn’t reach the music catalog. Try again when you’re online, or choose your own tracks / the offline demo.');
-  } finally { if (button.isConnected) button.disabled = false; }
+  } finally { if (valid()) button.disabled = false; }
 }
 function showUpload() {
   uploading = [...state.localTracks]; uploadErrors = [];
@@ -487,8 +530,9 @@ function showDemoGuide() {
   openModal(`<h2 id="modal-title">Meet the demo mix.</h2><p>Five original instrumental loops, made just for Offbeat. Listen to a sample to learn their sound, then put your memory to the test.</p><div class="demo-tracks">${DEMO_SONGS.map((song, i) => `<div><span>${escape(song.title)} <small>· ${escape(song.genre)}</small></span><button class="outline-button demo-listen-button" data-listen-demo="${i}" aria-label="Preview ${escape(song.title)}">Listen</button></div>`).join('')}</div><div class="modal-note">These are original demo melodies, not recordings of commercial songs. Choose a catalog mix or your own files to guess real releases.</div><button class="primary-button modal-full-button" data-action="close">I’m ready ${icon('arrow')}</button>`);
 }
 let demoAudio;
+modal.addEventListener('cancel', () => { songPreviews.stop(); demoAudio?.pause(); });
 modal.addEventListener('close', () => {
-  demoAudio?.pause(); clearTimeout(demoTimer); clearTimeout(pickerTimer); pickerGeneration++; artistSearchGeneration++; pendingRestart = null;
+  songPreviews.stop(); demoAudio?.pause(); clearTimeout(demoTimer); clearTimeout(pickerTimer); pickerGeneration++; artistSearchGeneration++; pendingRestart = null;
   uploading.forEach(track => { if (!state.localTracks.some(item => item.id === track.id)) URL.revokeObjectURL(track.preview); });
   uploading = [];
 });
@@ -541,5 +585,5 @@ document.addEventListener('click', async event => {
     try { await navigator.clipboard.writeText(text); toast('Results copied. Bragging rights are yours.'); } catch { toast('Copy isn’t available in this browser. Your score: ' + state.score.toLocaleString() + ' points.'); }
   }
 });
-document.addEventListener('visibilitychange', () => { if (document.hidden) { stopAudio(); demoAudio?.pause(); } });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { stopAudio(); songPreviews.pause(); demoAudio?.pause(); } });
 renderRound();
