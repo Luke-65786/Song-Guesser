@@ -1,11 +1,14 @@
 import { CLIP_LENGTHS, DEMO_SONGS, normalize, isCorrect, pointsFor, shuffle, catalogSongs, trackFromFile } from './game.js';
+import { catalogRequest, catalogSearch, catalogLookup } from './catalog.js';
+import { ERAS, GENRES, emptyFilters, filterLabel, filterSongs, discoveryTerms } from './filters.js';
 
 const $ = selector => document.querySelector(selector);
 const icon = name => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
 const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const audio = $('#audio');
 const modal = $('#modal');
-const state = { mode: 'everything', label: 'The everything mix', artist: '', deck: [], round: 0, attempt: 0, hinted: false, revealed: false, listened: false, results: [], score: 0, streak: 0, maxStreak: 0, loading: false, selected: null, suggestions: [], localTracks: [], generation: 0, finished: false, searchGeneration: 0 };
+const state = { mode: 'everything', label: 'The everything mix', artist: '', filters: emptyFilters(), deck: [], round: 0, attempt: 0, hinted: false, revealed: false, listened: false, results: [], score: 0, streak: 0, maxStreak: 0, loading: false, selected: null, suggestions: [], localTracks: [], generation: 0, finished: false, searchGeneration: 0 };
+let filterDraft = emptyFilters();
 let playFrame;
 let searchTimer;
 let toastTimer;
@@ -18,7 +21,9 @@ let playGeneration = 0;
 let artistSearchGeneration = 0;
 let demoTimer;
 let stats = readStats();
-const searchCache = new Map();
+let pickerGeneration = 0;
+let pickerResults = [];
+let pickerTimer;
 
 function readStats() {
   try {
@@ -32,27 +37,9 @@ function toast(message) { clearTimeout(toastTimer); $('#toast').textContent = me
 function target() { return state.deck[state.round]; }
 function roundCount() { return state.deck.length || Math.min(5, state.mode === 'local' ? state.localTracks.length : 5); }
 function currentPoints() { return pointsFor(state.attempt, state.hinted); }
-function openModal(html) { stopAudio(); demoAudio?.pause(); clearTimeout(demoTimer); $('#modal-body').innerHTML = html; if (!modal.open) modal.showModal(); }
+function openModal(html) { stopAudio(); demoAudio?.pause(); clearTimeout(demoTimer); pickerGeneration++; clearTimeout(pickerTimer); $('#modal-body').innerHTML = html; if (!modal.open) modal.showModal(); }
 function closeModal() { modal.close(); }
 function statusText(text) { const el = $('#modal-status'); if (el) el.textContent = text; }
-
-// Apple's public catalog supports JSONP, which works without an API key or a CORS proxy.
-async function catalogSearch(term) {
-  const key = normalize(term);
-  if (searchCache.has(key)) return searchCache.get(key);
-  const promise = new Promise((resolve, reject) => {
-    const callback = `offbeat_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    const script = document.createElement('script');
-    const cleanup = () => { clearTimeout(timer); script.remove(); delete window[callback]; };
-    const timer = setTimeout(() => { cleanup(); reject(new Error('The music catalog took too long to respond.')); }, 8000);
-    window[callback] = data => { cleanup(); resolve(catalogSongs(Array.isArray(data?.results) ? data.results : [])); };
-    script.src = `https://itunes.apple.com/search?${new URLSearchParams({ term, entity: 'song', media: 'music', country: 'US', limit: '50', callback })}`;
-    script.onerror = () => { cleanup(); reject(new Error('The music catalog could not be reached.')); };
-    document.head.append(script);
-  });
-  searchCache.set(key, promise);
-  try { return await promise; } catch (error) { searchCache.delete(key); throw error; }
-}
 
 async function prepareDeck() {
   if (state.deck.length) return true;
@@ -66,6 +53,18 @@ async function prepareDeck() {
       let songs;
       if (state.mode === 'demo') songs = DEMO_SONGS;
       else if (state.mode === 'local') songs = state.localTracks;
+      else if (state.mode === 'filtered') {
+        const filters = state.filters;
+        if (filters.album) songs = catalogSongs(await catalogLookup(filters.album.id));
+        else if (filters.artist) songs = catalogSongs(await catalogLookup(filters.artist.id));
+        else {
+          const results = await Promise.allSettled(discoveryTerms(filters).map(catalogSearch));
+          if (results.every(result => result.status === 'rejected')) throw new Error('The music catalog could not be reached.');
+          songs = [...new Map(results.flatMap(result => result.status === 'fulfilled' ? result.value : []).map(song => [song.id, song])).values()];
+        }
+        songs = filterSongs(songs, filters);
+        if (!songs.length) throw new Error('No playable songs match all these filters. Try a broader era or genre, or clear the album.');
+      }
       else if (state.mode === 'artist') {
         songs = await catalogSearch(state.artist);
         const exact = songs.filter(song => normalize(song.artist) === normalize(state.artist));
@@ -82,8 +81,11 @@ async function prepareDeck() {
       return true;
     } catch (error) {
       if (generation !== state.generation) return false;
-      $('#feedback').innerHTML = `${escape(error.message)} Try another artist, <button type="button" data-action="upload">add your own songs</button>, or <button type="button" data-action="demo">play the offline demo</button>.`;
-      $('#play-caption').textContent = 'Catalog unavailable. Try the offline demo below.';
+      const noMatches = state.mode === 'filtered' && error.message.startsWith('No playable songs match');
+      $('#feedback').innerHTML = noMatches
+        ? `${escape(error.message)} <button type="button" data-action="edit-filters">Edit your filters</button> or <button type="button" data-action="demo">try the offline demo</button>.`
+        : `${escape(error.message)} Try another artist, <button type="button" data-action="upload">add your own songs</button>, or <button type="button" data-action="demo">play the offline demo</button>.`;
+      $('#play-caption').textContent = noMatches ? 'No songs in this combination. Try broader filters.' : 'Catalog unavailable. Try the offline demo below.';
       return false;
     } finally {
       if (generation === state.generation) { state.loading = false; updateControls(); }
@@ -320,21 +322,23 @@ function finishSession() {
   $('#next-button').innerHTML = `View session results ${icon('arrow')}`;
 }
 
-function requestRestart(mode, label, artist = '', tracks = null) {
+function requestRestart(mode, label, artist = '', tracks = null, filters = null) {
   if (!state.finished && (state.results.length || state.listened || state.attempt > 0)) {
-    pendingRestart = { mode, label, artist, tracks };
+    pendingRestart = { mode, label, artist, tracks, filters };
     openModal(`<h2 id="modal-title">A fresh set of songs?</h2><p>Your current session will end. Completed sessions stay in your stats.</p><div class="confirm-actions"><button class="outline-button" data-action="cancel-restart">Keep playing</button><button class="primary-button" data-action="confirm-restart">Start new mix ${icon('arrow')}</button></div>`);
     return;
   }
-  restart(mode, label, artist, tracks);
+  restart(mode, label, artist, tracks, filters);
 }
-function restart(mode, label, artist = '', tracks = null) {
+function restart(mode, label, artist = '', tracks = null, filters = null) {
   stopAudio(); state.generation++; loadingDeck = null;
   if (tracks) {
     state.localTracks.forEach(track => { if (!tracks.some(item => item.id === track.id)) URL.revokeObjectURL(track.preview); });
     state.localTracks = tracks;
   }
-  Object.assign(state, { mode, label, artist, deck: [], round: 0, attempt: 0, hinted: false, revealed: false, listened: false, results: [], score: 0, streak: 0, maxStreak: 0, loading: false, selected: null, finished: false });
+  Object.assign(state, { mode, label, artist, filters: filters || emptyFilters(), deck: [], round: 0, attempt: 0, hinted: false, revealed: false, listened: false, results: [], score: 0, streak: 0, maxStreak: 0, loading: false, selected: null, finished: false });
+  filterDraft = { ...state.filters };
+  renderFilters(mode === 'filtered' ? 'Mix applied. Press play to discover your songs.' : 'Pick a decade, a genre, or a favorite. Mix them together.');
   closeModal(); renderRound();
   if (mode === 'demo' || mode === 'local') {
     state.deck = shuffle(mode === 'demo' ? DEMO_SONGS : state.localTracks).slice(0, 5); renderSession();
@@ -343,6 +347,76 @@ function restart(mode, label, artist = '', tracks = null) {
   toast(`${label} is ready. Let’s hear it.`);
   $('#game').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+
+function renderFilters(message = 'Selections changed. Apply your mix when you’re ready.') {
+  $('#era-filter').value = filterDraft.era;
+  $('#genre-filter').value = filterDraft.genre;
+  $('#artist-filter-value').textContent = filterDraft.artist?.name || 'Any artist';
+  $('#album-filter-value').textContent = filterDraft.album?.title || 'Any album';
+  $('#artist-filter').title = filterDraft.artist?.name || 'Choose an artist';
+  $('#album-filter').title = filterDraft.album?.title || 'Choose an album';
+  $('#artist-filter').classList.toggle('has-selection', !!filterDraft.artist);
+  $('#album-filter').classList.toggle('has-selection', !!filterDraft.album);
+  $('#filter-status').textContent = message;
+  $('#reset-filters').disabled = !filterDraft.era && !filterDraft.genre && !filterDraft.artist && !filterDraft.album;
+}
+function showFilterPicker(kind) {
+  const album = kind === 'album';
+  openModal(`<h2 id="modal-title">${album ? 'Go deep on an album.' : 'Find your favorite artist.'}</h2><p>${album ? 'Pick a record and guess the songs inside it. Your era and genre choices will also apply.' : 'Search the catalog, choose an artist, then combine with an era or genre.'}</p><form id="filter-picker-form"><label class="field-label" for="filter-picker-query">${album ? 'Album title or artist' : 'Artist name'}</label><div class="artist-form"><input id="filter-picker-query" class="modal-input" placeholder="${album ? 'e.g. Abbey Road' : 'e.g. Beyoncé'}" maxlength="100" autocomplete="off"><button class="primary-button" type="submit">Search ${icon('search')}</button></div></form><div id="picker-status" class="modal-status" role="status">${album && filterDraft.artist ? `Albums by ${escape(filterDraft.artist.name)}. Type to narrow the list.` : 'Type at least two characters to search.'}</div><div id="filter-picker-results" class="filter-picker-results" aria-label="${album ? 'Albums' : 'Artists'}"></div><div class="picker-footer"><button class="outline-button" id="clear-picker">${album ? 'Any album' : 'Any artist'}</button><span>${album ? 'Choosing an album also selects its artist.' : 'Changes apply when you press Apply mix.'}</span></div>`);
+  const form = $('#filter-picker-form');
+  const input = $('#filter-picker-query');
+  const search = async () => {
+    const query = input.value.trim();
+    const request = ++pickerGeneration;
+    const valid = () => modal.open && form.isConnected && request === pickerGeneration;
+    const status = $('#picker-status');
+    const list = $('#filter-picker-results');
+    list.innerHTML = '';
+    if (query.length < 2 && !(album && filterDraft.artist)) { status.textContent = 'Type at least two characters to search.'; return; }
+    status.textContent = album ? 'Finding albums…' : 'Finding artists…';
+    try {
+      const records = album && filterDraft.artist
+        ? await catalogLookup(filterDraft.artist.id, 'album')
+        : await catalogRequest('search', { term: query, media: 'music', entity: album ? 'album' : 'musicArtist', limit: '50' });
+      if (!valid()) return;
+      const seen = new Set();
+      pickerResults = records.filter(record => album ? record.collectionId && record.collectionName && record.artistId : record.artistId && record.artistName)
+        .map(record => album ? { id: String(record.collectionId), title: record.collectionName, artist: record.artistName, artistId: String(record.artistId), year: record.releaseDate?.slice(0, 4) || '', genre: record.primaryGenreName || 'Album' } : { id: String(record.artistId), name: record.artistName, genre: record.primaryGenreName || 'Artist' })
+        .filter(item => { if (seen.has(item.id)) return false; seen.add(item.id); return !album || !filterDraft.artist || (item.artistId === filterDraft.artist.id && (!query || normalize(item.title).includes(normalize(query)))); }).slice(0, 30);
+      status.textContent = pickerResults.length ? `${pickerResults.length} ${album ? 'albums' : 'artists'} found. Choose one below.` : `No ${album ? 'albums' : 'artists'} found. Try a different name${album && filterDraft.artist ? ', or clear the artist filter' : ''}.`;
+      list.innerHTML = pickerResults.map((item, index) => `<button type="button" class="filter-result" data-pick-index="${index}"><span class="mix-card-icon ${album ? 'sage' : 'lilac'}">${icon('music')}</span><span><strong>${escape(album ? item.title : item.name)}</strong><small>${escape(album ? `${item.artist}${item.year ? ' · ' + item.year : ''}` : item.genre)}</small></span>${icon('arrow')}</button>`).join('');
+      list.querySelectorAll('[data-pick-index]').forEach(button => button.addEventListener('click', () => {
+        const item = pickerResults[Number(button.dataset.pickIndex)];
+        if (album) { filterDraft.album = item; filterDraft.artist = { id: item.artistId, name: item.artist }; }
+        else { if (filterDraft.album?.artistId !== item.id) filterDraft.album = null; filterDraft.artist = item; }
+        closeModal(); renderFilters(); $(`#${kind}-filter`).focus();
+      }));
+    } catch {
+      if (valid()) status.textContent = 'The catalog couldn’t be reached. Try again, or play your own tracks / the offline demo.';
+    }
+  };
+  form.addEventListener('submit', event => { event.preventDefault(); clearTimeout(pickerTimer); search(); });
+  input.addEventListener('input', () => { pickerGeneration++; clearTimeout(pickerTimer); pickerTimer = setTimeout(search, 350); });
+  input.addEventListener('keydown', event => { if (event.key === 'ArrowDown' && $('#filter-picker-results button')) { event.preventDefault(); $('#filter-picker-results button').focus(); } });
+  $('#clear-picker').addEventListener('click', () => { filterDraft[kind] = null; if (!album) filterDraft.album = null; closeModal(); renderFilters(); $(`#${kind}-filter`).focus(); });
+  input.focus();
+  if (album && filterDraft.artist) search();
+}
+
+ERAS.forEach(era => $('#era-filter').add(new Option(era.label, era.value)));
+GENRES.forEach(genre => $('#genre-filter').add(new Option(genre.label, genre.value)));
+$('#era-filter').addEventListener('change', () => { filterDraft.era = $('#era-filter').value; renderFilters(); });
+$('#genre-filter').addEventListener('change', () => { filterDraft.genre = $('#genre-filter').value; renderFilters(); });
+$('#artist-filter').addEventListener('click', () => showFilterPicker('artist'));
+$('#album-filter').addEventListener('click', () => showFilterPicker('album'));
+$('#reset-filters').addEventListener('click', () => { filterDraft = emptyFilters(); renderFilters('Filters cleared. Apply mix to return to everything.'); });
+$('#mix-filters').addEventListener('submit', event => {
+  event.preventDefault();
+  const filters = { ...filterDraft };
+  const label = filterLabel(filters);
+  requestRestart(label === 'The everything mix' ? 'everything' : 'filtered', label, '', null, filters);
+});
+
 function showMixes() {
   openModal(`<h2 id="modal-title">Find your frequency.</h2><p>All the music you love. A few seconds to prove it.</p><button class="mode-option" data-action="everything"><span class="mix-card-icon peach">${icon('shuffle')}</span><span><strong>The everything mix</strong><small>Big artists and familiar favorites. Always shuffled.</small></span>${icon('arrow')}</button><button class="mode-option" data-action="artist"><span class="mix-card-icon lilac">${icon('music')}</span><span><strong>Your favorite artist</strong><small>Build a challenge around any artist in the catalog.</small></span>${icon('arrow')}</button><button class="mode-option" data-action="upload"><span class="mix-card-icon sage">${icon('upload')}</span><span><strong>Bring your own tracks</strong><small>Pick audio files. Play any song in your library.</small></span>${icon('arrow')}</button><button class="mode-option" data-action="demo"><span class="mix-card-icon peach">${icon('headphones')}</span><span><strong>The offline demo</strong><small>Five original tunes. No connection needed.</small></span>${icon('arrow')}</button><div class="modal-note">Catalog games use short Apple iTunes previews. Availability varies by song and region. Your own audio stays on your device.</div>`);
 }
@@ -400,7 +474,7 @@ function showDemoGuide() {
 }
 let demoAudio;
 modal.addEventListener('close', () => {
-  demoAudio?.pause(); clearTimeout(demoTimer); artistSearchGeneration++; pendingRestart = null;
+  demoAudio?.pause(); clearTimeout(demoTimer); clearTimeout(pickerTimer); pickerGeneration++; artistSearchGeneration++; pendingRestart = null;
   uploading.forEach(track => { if (!state.localTracks.some(item => item.id === track.id)) URL.revokeObjectURL(track.preview); });
   uploading = [];
 });
@@ -436,6 +510,7 @@ document.addEventListener('click', async event => {
   if (!action) return;
   if (action === 'close') closeModal();
   if (action === 'mix') showMixes();
+  if (action === 'edit-filters') { $('.mix-toolbar').scrollIntoView({ behavior: 'smooth', block: 'start' }); $('#era-filter').focus({ preventScroll: true }); }
   if (action === 'artist') showArtist();
   if (action === 'upload') showUpload();
   if (action === 'demo-guide') showDemoGuide();
@@ -445,8 +520,8 @@ document.addEventListener('click', async event => {
     requestRestart('local', 'Your own tracks', '', [...uploading]);
   }
   if (action === 'cancel-restart') { pendingRestart = null; closeModal(); }
-  if (action === 'confirm-restart' && pendingRestart) { const config = pendingRestart; pendingRestart = null; restart(config.mode, config.label, config.artist, config.tracks); }
-  if (action === 'again') restart(state.mode, state.label, state.artist);
+  if (action === 'confirm-restart' && pendingRestart) { const config = pendingRestart; pendingRestart = null; restart(config.mode, config.label, config.artist, config.tracks, config.filters); }
+  if (action === 'again') restart(state.mode, state.label, state.artist, null, state.filters);
   if (action === 'share') {
     const text = `Offbeat · ${state.label}\n${state.results.map(result => result.correct ? '🟩' : '⬜').join('')}\n${state.score.toLocaleString()} points · ${state.results.filter(result => result.correct).length}/${state.results.length} songs\nHow soon do you know the song?`;
     try { await navigator.clipboard.writeText(text); toast('Results copied. Bragging rights are yours.'); } catch { toast('Copy isn’t available in this browser. Your score: ' + state.score.toLocaleString() + ' points.'); }

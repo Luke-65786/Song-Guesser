@@ -3,11 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f7f7f2">
+  <meta name="theme-color" content="#111410">
+  <meta name="color-scheme" content="dark">
   <meta name="description" content="A little sound. A big clue. Guess the song from a tiny clip. Play artist mixes, explore a music catalog, or bring your own tracks.">
   <title>Offbeat — Name that feeling. Guess that song.</title>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./theme.css">
   <script type="module" src="./app.js"></script>
 </head>
 <body>
@@ -38,6 +40,17 @@
   </header>
 
   <main class="page">
+    <section class="mix-toolbar" aria-label="Customize your music mix">
+      <div class="toolbar-heading"><span class="tiny-spark" aria-hidden="true">✳</span><div><strong>Find your mix</strong><span>Make it your kind of music.</span></div></div>
+      <form id="mix-filters" class="filter-form">
+        <label class="filter-field"><span>Era</span><select id="era-filter" aria-label="Era"><option value="">All eras</option></select><span class="filter-chevron" aria-hidden="true">⌄</span></label>
+        <label class="filter-field"><span>Genre</span><select id="genre-filter" aria-label="Genre"><option value="">All genres</option></select><span class="filter-chevron" aria-hidden="true">⌄</span></label>
+        <button type="button" id="artist-filter" class="filter-field filter-picker" aria-haspopup="dialog"><span>Artists</span><strong id="artist-filter-value">Any artist</strong><span class="filter-chevron" aria-hidden="true">⌄</span></button>
+        <button type="button" id="album-filter" class="filter-field filter-picker" aria-haspopup="dialog"><span>Albums</span><strong id="album-filter-value">Any album</strong><span class="filter-chevron" aria-hidden="true">⌄</span></button>
+        <button type="submit" class="primary-button apply-filters" id="apply-filters"><svg aria-hidden="true"><use href="#i-shuffle"/></svg>Apply mix</button>
+      </form>
+      <div class="filter-footer"><span id="filter-status" role="status">Pick a decade, a genre, or a favorite. Mix them together.</span><button type="button" id="reset-filters">Reset filters</button></div>
+    </section>
     <section class="hero" aria-labelledby="hero-title">
       <div class="hero-copy"><div class="eyebrow"><span class="tiny-spark">✳</span> SMALL CLIPS. BIG MUSIC ENERGY.</div><h1 id="hero-title">You know the song.<br>But how <span class="accent-word">soon<svg viewBox="0 0 190 15" aria-hidden="true"><path d="M3 10C55 1 122 2 185 6M12 14c54-7 111-7 160-5"/></svg></span>?</h1><p>Put your ears to the test. One second might be all you need.</p></div>
       <div class="hero-art" aria-hidden="true"><span class="art-spark spark-one">✳</span><span class="art-spark spark-two">+</span><div class="album-sleeve"><span class="sleeve-top">OFFBEAT RECORDS</span><div class="sleeve-circle"></div><span class="sleeve-bottom">FOR THE LOVE<br>OF THE FIRST NOTE.</span><span class="sleeve-number">VOL.<br><b>01</b></span></div><div class="vinyl"><div class="vinyl-label"><svg><use href="#i-logo"/></svg><i></i></div></div><span class="art-caption">less thinking, more listening.</span><svg class="art-arrow" viewBox="0 0 100 50"><path d="M4 37c42 22 74-3 70-29m-8 9 8-11 9 12"/></svg></div>

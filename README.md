@@ -1,6 +1,6 @@
 # Offbeat
 
-A song guessing game with a music catalog, artist challenges, and private local-file mixes. Built with HTML, CSS, JavaScript modules, and a small Node HTTP server. No runtime dependencies, API keys, accounts, or build step.
+A dark-themed song guessing game with a music catalog, era/genre/artist/album filters, artist challenges, and private local-file mixes. Built with HTML, CSS, JavaScript modules, and a small Node HTTP server. No runtime dependencies, API keys, accounts, or build step.
 
 ## Run
 
@@ -34,6 +34,10 @@ The publishing script uses Git and Node without extra dependencies, keeps public
 - **Your own tracks:** select or drag in audio files, with filenames such as `Artist - Song title.mp3`. Audio stays on the device using object URLs; nothing is uploaded. This is the way to play songs outside the catalog. Have a friend choose the files to keep the answers a surprise.
 - **Offline demo:** five included original instrumental loops. Open “Meet the tracks” to hear and learn the demos first. These are original synthesized tunes, not commercial song recordings.
 
+The top **Find your mix** bar lets you combine an **Era** (1960s–2020s), **Genre**, **Artist**, and **Album**. Artist and album pickers search the catalog. Selecting an album also selects its artist; choosing a different artist clears an incompatible album. Press **Apply mix** to start a filtered session. Changes stay as draft selections until applied, and replacing an in-progress game asks for confirmation. **Reset filters** clears the selections; apply them to return to the everything mix. The filters apply to catalog games; switching to a demo or local library clears them.
+
+All selected filters must match. Artist and album IDs determine membership, and decades use catalog release dates (which can differ for reissues). Discovery mixes sample catalog searches around artists in the selected era/genre; they are not an exhaustive list of all matching songs. Sessions contain up to five available previews. An empty combination asks you to broaden the filters rather than substituting unrelated songs. The interface always uses the dark theme, including native inputs and dialogs, regardless of system preferences.
+
 Clips unlock at 1, 2, 4, 7, 11, and 16 seconds. Correct answers earn 1,000, 800, 600, 400, 250, or 100 points respectively. A hint deducts 150 points, with a minimum award of 50. Replay a clip freely, submit a typed title or pick a search result, and skip to unlock more audio. After six attempts, the song is revealed. Completed-session stats are stored in this browser's localStorage. Local libraries and in-progress sessions do not persist after reload.
 
 Keyboard support: `/` focuses the guess input, arrow keys navigate search results, Enter selects or submits, and Escape closes a dialog or suggestions. Reduced motion and mobile layouts are supported.
@@ -54,15 +58,18 @@ npm run check
 npm test
 ```
 
-Unit and HTTP tests cover guesses, catalog deduplication, scores, filenames, static assets, and audio range requests. HTTP tests require permission to bind a temporary local port.
+Unit and HTTP tests cover guesses, catalog deduplication, scores, filenames, static assets, audio range requests, and era/genre/artist/album filter intersections. HTTP tests require permission to bind a temporary local port.
 
 For browser integration tests, run the app in a second terminal and use an environment with Python Playwright and Chromium installed:
 
 ```sh
 python3 scripts/browser-smoke.py
+python3 scripts/browser-filters.py
 ```
 
 Override `CHROMIUM_PATH` or `OFFBEAT_TEST_URL` if needed. These tests play real local audio and exercise sessions, timing, uploads, saved stats, network failure recovery, desktop/mobile layouts, and a **mocked** catalog response. Screenshots are written to `/tmp/offbeat-desktop.png` and `/tmp/offbeat-mobile.png`. A mocked catalog test does not establish that Apple's live service is reachable.
+
+The filter suite additionally checks combined and individual filters, album/artist consistency, reset, empty results, picker failures, preserving an active session, and dark styling with a light system preference. Its screenshots are `/tmp/offbeat-dark-desktop.png` and `/tmp/offbeat-dark-mobile.png`. The same suite can validate a GitHub Pages-style subpath by setting `OFFBEAT_TEST_URL` to a static server's project URL.
 
 ## Assets
 
