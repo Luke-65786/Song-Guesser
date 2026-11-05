@@ -3,7 +3,7 @@ import { MAX_CLIP_LENGTH, formatTime } from './game.js';
 const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const control = (text, symbol) => `<svg aria-hidden="true"><use href="#i-${symbol}"/></svg><span>${text}</span>`;
 
-// One dedicated player for browsing artists. It never advances or scores a game.
+// One dedicated player for browsing previews. It never advances or scores a game.
 export function createSongPreviews(audio, beforePlay) {
   let active = null;
   let generation = 0;
@@ -83,13 +83,13 @@ export function createSongPreviews(audio, beforePlay) {
   audio.addEventListener('ended', () => { if (active) finish(); });
   audio.addEventListener('error', () => { if (active) failed(); });
 
-  function render(container, songs, artistName) {
-    const tracks = songs.slice(0, 5);
-    container.innerHTML = `<div class="song-previews-heading"><h3>Song previews</h3><span>Up to ${MAX_CLIP_LENGTH} seconds each</span></div><ol class="song-preview-list">${tracks.map((song, index) => `<li class="song-preview-row"><span class="song-preview-number">${index + 1}</span><div class="song-preview-info"><strong>${escape(song.title)}</strong><small>${escape(song.album || song.artist)}${song.year && song.year !== 'Unknown year' ? ` · ${escape(song.year)}` : ''}</small><div class="song-preview-timing" hidden><div class="song-preview-line" aria-hidden="true"><span class="song-preview-fill"></span></div><span class="song-preview-time">${formatTime(0)} / ${formatTime(MAX_CLIP_LENGTH)}</span></div></div><button type="button" class="song-preview-button" aria-label="Play ${escape(song.title)} by ${escape(song.artist)}" aria-pressed="false">${control('Play', 'play')}</button></li>`).join('')}</ol><p class="song-preview-status" role="status" aria-label="${escape(artistName)} preview status">Choose a track to listen.</p>`;
+  function render(container, songs, artistName, options = {}) {
+    const tracks = songs.slice(0, options.limit || 5);
+    container.innerHTML = `<div class="song-previews-heading"><h3>${escape(options.heading || 'Song previews')}</h3><span>Up to ${MAX_CLIP_LENGTH} seconds each</span></div><ol class="song-preview-list">${tracks.map((song, index) => `<li class="song-preview-row"><span class="song-preview-number">${options.ranked ? song.rank : index + 1}</span><div class="song-preview-info"><strong>${escape(song.title)}</strong><small>${escape(options.showArtist ? song.artist : song.album || song.artist)}${song.year && song.year !== 'Unknown year' ? ` · ${escape(song.year)}` : ''}</small><div class="song-preview-timing" hidden><div class="song-preview-line" aria-hidden="true"><span class="song-preview-fill"></span></div><span class="song-preview-time">${formatTime(0)} / ${formatTime(MAX_CLIP_LENGTH)}</span></div></div><button type="button" class="song-preview-button" aria-label="${song.preview ? 'Play' : 'Preview unavailable for'} ${escape(song.title)} by ${escape(song.artist)}" aria-pressed="false"${song.preview ? '' : ' disabled'}>${control(song.preview ? 'Play' : 'Unavailable', song.preview ? 'play' : 'music')}</button></li>`).join('')}</ol><p class="song-preview-status" role="status" aria-label="${escape(artistName)} preview status">Choose a track to listen.</p>`;
     const status = container.querySelector('.song-preview-status');
     container.querySelectorAll('.song-preview-row').forEach((row, index) => {
       const button = row.querySelector('.song-preview-button');
-      button.addEventListener('click', () => play({ row, button, status, song: tracks[index] }));
+      if (tracks[index].preview) button.addEventListener('click', () => play({ row, button, status, song: tracks[index] }));
     });
   }
   return { render, stop, pause };

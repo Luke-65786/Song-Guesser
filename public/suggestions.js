@@ -27,13 +27,14 @@ export function searchScopeLabel(scope) {
   if (scope.mode === 'playlist') return `Search this playlist: ${(scope.playlist || []).map(artist => artist.name).join(', ')}${label !== 'The everything mix' ? ' · ' + label : ''}`;
   if (scope.mode === 'artist') return `Search ${scope.artist} songs only`;
   if (scope.mode === 'filtered') return `Search this mix: ${label}`;
+  if (scope.mode === 'trending') return 'Search playable songs from this trending chart';
   if (scope.mode === 'demo') return 'Search the original demo tracks';
   if (scope.mode === 'local') return 'Search your uploaded tracks';
   return 'Search all songs · Apply a mix or shuffle a playlist to narrow results';
 }
 export async function findMixSuggestions(query, scope, knownSongs = []) {
   if (!searchText(query)) return [];
-  if (scope.mode === 'demo' || scope.mode === 'local') return matchSongQuery(knownSongs, query);
+  if (['demo', 'local', 'trending'].includes(scope.mode)) return matchSongQuery(knownSongs, query);
   const filters = scope.filters || emptyFilters();
   const collection = scope.mode === 'playlist' || scope.mode === 'artist' || (scope.mode === 'filtered' && (filters.artist || filters.album));
   let songs = knownSongs;

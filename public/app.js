@@ -1,9 +1,11 @@
-import { CLIP_LENGTHS, MAX_CLIP_LENGTH, formatTime, DEMO_SONGS, normalize, isCorrect, pointsFor, shuffle, catalogSongs, trackFromFile } from './game.js';
+import { MAX_CLIP_LENGTH, formatTime, DEMO_SONGS, normalize, isCorrect, shuffle, catalogSongs, trackFromFile } from './game.js';
 import { catalogRequest, catalogSearch, catalogLookup } from './catalog.js';
 import { ERAS, GENRES, emptyFilters, filterLabel, filterSongs, discoveryTerms } from './filters.js';
 import { createSongPreviews } from './song-previews.js';
 import { MAX_PLAYLIST_ARTISTS, cleanArtists, readArtistLibrary, saveArtistLibrary, roundSetting, chooseRounds, buildArtistDeck } from './artist-library.js';
 import { findMixSuggestions, scopedSongs, searchText, searchScopeLabel } from './suggestions.js';
+import { DIFFICULTIES, difficultyRules, difficultyPoints } from './difficulty.js';
+import { loadTrendingChart } from './trending.js';
 
 const $ = selector => document.querySelector(selector);
 const icon = name => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
@@ -11,7 +13,7 @@ const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;
 const audio = $('#audio');
 const modal = $('#modal');
 const songPreviews = createSongPreviews($('#artist-preview-audio'), () => { stopAudio(); demoAudio?.pause(); clearTimeout(demoTimer); $('#artist-preview-audio').muted = audio.muted; });
-const state = { mode: 'everything', label: 'The everything mix', artist: '', filters: emptyFilters(), roundSetting: 5, requestedRounds: 5, playlist: [], searchPool: [], deck: [], round: 0, attempt: 0, hinted: false, revealed: false, listened: false, results: [], score: 0, streak: 0, maxStreak: 0, loading: false, selected: null, suggestions: [], localTracks: [], generation: 0, finished: false, searchGeneration: 0 };
+const state = { mode: 'everything', label: 'The everything mix', artist: '', difficulty: 'regular', chartSongs: [], filters: emptyFilters(), roundSetting: 5, requestedRounds: 5, playlist: [], searchPool: [], deck: [], round: 0, attempt: 0, hinted: false, revealed: false, listened: false, results: [], score: 0, streak: 0, maxStreak: 0, loading: false, selected: null, suggestions: [], localTracks: [], generation: 0, finished: false, searchGeneration: 0 };
 let libraryStorage;
 try { libraryStorage = localStorage; } catch { /* In-memory library when storage is unavailable. */ }
 let artistLibrary = readArtistLibrary(libraryStorage);
@@ -51,7 +53,8 @@ function selectedRounds() {
   if (value === 'custom' && !input.checkValidity()) { if (modal.open) closeModal(); input.reportValidity(); input.focus(); return null; }
   return roundSetting(value === 'custom' ? input.valueAsNumber : value);
 }
-function currentPoints() { return pointsFor(state.attempt, state.hinted); }
+function activeClips() { return difficultyRules(state.difficulty).clips; }
+function currentPoints() { return difficultyPoints(state.difficulty, state.attempt, state.hinted); }
 function openModal(html) { stopAudio(); songPreviews.stop(); demoAudio?.pause(); clearTimeout(demoTimer); pickerGeneration++; clearTimeout(pickerTimer); $('#modal-body').innerHTML = html; if (!modal.open) modal.showModal(); }
 function closeModal() { songPreviews.stop(); modal.close(); }
 function statusText(text) { const el = $('#modal-status'); if (el) el.textContent = text; }
@@ -69,6 +72,7 @@ async function prepareDeck() {
       let groups;
       if (state.mode === 'demo') songs = DEMO_SONGS;
       else if (state.mode === 'local') songs = state.localTracks;
+      else if (state.mode === 'trending') songs = state.chartSongs.filter(song => song.preview);
       else if (state.mode === 'playlist') {
         groups = [];
         for (let start = 0; start < state.playlist.length; start += 3) {
@@ -126,7 +130,7 @@ async function prepareDeck() {
   return task;
 }
 
-function renderPlayback(position = 0, limit = state.revealed ? MAX_CLIP_LENGTH : CLIP_LENGTHS[state.attempt]) {
+function renderPlayback(position = 0, limit = state.revealed ? MAX_CLIP_LENGTH : activeClips()[state.attempt]) {
   const elapsed = Math.min(limit, Math.max(0, position));
   $('#playback-progress').style.width = `${elapsed / limit * 100}%`;
   $('#playback-line').setAttribute('aria-valuemax', String(limit));
@@ -151,7 +155,9 @@ function updateControls() {
   $('#guess-button').disabled = state.loading || state.revealed || !$('#guess-input').value.trim();
   $('#guess-input').disabled = state.loading || state.revealed;
   $('#skip-button').disabled = state.loading || state.revealed;
-  $('#hint-button').disabled = state.loading || state.revealed || state.hinted;
+  $('#hint-button').disabled = state.loading || state.revealed || state.hinted || !difficultyRules(state.difficulty).hints;
+  $('#hint-button').title = difficultyRules(state.difficulty).hints ? 'A hint costs 150 points' : 'Hints are off on Hard difficulty';
+  $('#hint-button span').textContent = difficultyRules(state.difficulty).hints ? '−150 pts' : 'No hints on Hard';
 }
 function renderRound() {
   stopAudio();
@@ -161,19 +167,24 @@ function renderRound() {
   $('#result').hidden = true; $('#result').className = 'result';
   $('#guess-form').hidden = false; $('#next-button').hidden = true;
   $('#game-title').textContent = "What's the track?";
+  $('.hero-copy > p').textContent = `Put your ears to the test. Start with just ${activeClips()[0]} ${activeClips()[0] === 1 ? 'second' : 'seconds'}.`;
   $('#game-subtitle').textContent = state.mode === 'demo' ? 'An original demo tune. Listen, then take your best guess.' : state.mode === 'local' ? 'Your library. A tiny snippet. Put your ears to the test.' : 'A familiar tune. A tiny snippet. You’ve got this.';
   $('#mix-label').textContent = state.label;
+  $('#difficulty-badge').hidden = state.mode !== 'everything';
+  $('#difficulty-badge').textContent = `${difficultyRules(state.difficulty).label} · ${activeClips().length} chances`;
   $('#search-scope').textContent = searchScopeLabel(state);
   $('#play-caption').textContent = 'Press play. Find your first clue.';
   closeSuggestions(); updateAttempt(); renderSession(); updateControls();
 }
 function updateAttempt() {
+  const clips = activeClips();
+  $('#clip-steps').style.gridTemplateColumns = `repeat(${clips.length}, 1fr)`;
   $('#available-points').textContent = currentPoints().toLocaleString();
-  $('#attempt-label').textContent = `GUESS ${state.attempt + 1} OF ${CLIP_LENGTHS.length}`;
-  const nextLength = CLIP_LENGTHS[state.attempt + 1];
-  const increment = nextLength == null ? 0 : Number((nextLength - CLIP_LENGTHS[state.attempt]).toFixed(1));
-  $('#skip-button span').textContent = state.attempt === CLIP_LENGTHS.length - 1 ? '(reveal song)' : `(+${increment} ${increment === 1 ? 'second' : 'seconds'})`;
-  $('#clip-steps').innerHTML = CLIP_LENGTHS.map((seconds, i) => `<div role="listitem" class="clip-step${i === state.attempt ? ' active' : i < state.attempt ? ' completed' : ''}"${i === state.attempt ? ' aria-current="step"' : ''}><span>${seconds}s</span></div>`).join('');
+  $('#attempt-label').textContent = `GUESS ${state.attempt + 1} OF ${clips.length}`;
+  const nextLength = clips[state.attempt + 1];
+  const increment = nextLength == null ? 0 : Number((nextLength - clips[state.attempt]).toFixed(1));
+  $('#skip-button span').textContent = state.attempt === clips.length - 1 ? '(reveal song)' : `(+${increment} ${increment === 1 ? 'second' : 'seconds'})`;
+  $('#clip-steps').innerHTML = clips.map((seconds, i) => `<div role="listitem" class="clip-step${i === state.attempt ? ' active' : i < state.attempt ? ' completed' : ''}"${i === state.attempt ? ' aria-current="step"' : ''}><span>${seconds}s</span></div>`).join('');
   renderPlayback();
 }
 function $$(selector) { return [...document.querySelectorAll(selector)]; }
@@ -188,6 +199,7 @@ function playbackError() {
   $('#feedback').innerHTML = 'The audio may be unavailable in your region or blocked by your connection. <button type="button" data-action="mix">Choose another mix</button> or <button type="button" data-action="demo">try the offline demo</button>.';
 }
 async function playClip() {
+  songPreviews.stop();
   if (!audio.paused) { stopAudio(); return; }
   const generation = state.generation;
   if (!(await prepareDeck()) || generation !== state.generation) return;
@@ -207,7 +219,7 @@ async function playClip() {
     $('#audio-player').classList.add('is-playing');
     $('#play-button').setAttribute('aria-label', 'Pause song clip');
     $('#play-caption').textContent = state.revealed ? 'One more listen. This one’s a keeper.' : 'Listen close. You know more than you think.';
-    const limit = state.revealed ? MAX_CLIP_LENGTH : CLIP_LENGTHS[state.attempt];
+    const limit = state.revealed ? MAX_CLIP_LENGTH : activeClips()[state.attempt];
     const finishClip = () => {
       renderPlayback(audio.currentTime, limit); stopAudio();
       $('#play-caption').textContent = 'Got it? Make your guess. Or listen again.';
@@ -257,7 +269,7 @@ async function searchSuggestions() {
   const searchGeneration = ++state.searchGeneration;
   const valid = () => generation === state.generation && searchGeneration === state.searchGeneration && $('#guess-input').value.trim() === query && !state.revealed;
   const scope = { mode: state.mode, artist: state.artist, filters: { ...state.filters }, playlist: [...state.playlist] };
-  const pool = state.mode === 'demo' ? DEMO_SONGS : state.mode === 'local' ? state.localTracks : state.searchPool;
+  const pool = state.mode === 'demo' ? DEMO_SONGS : state.mode === 'local' ? state.localTracks : state.mode === 'trending' ? state.chartSongs.filter(song => song.preview) : state.searchPool;
   showSuggestions([], 'Finding matching songs…');
   try {
     const songs = await findMixSuggestions(query, scope, pool);
@@ -308,20 +320,20 @@ $('#guess-form').addEventListener('submit', async event => {
   else {
     const title = typeof guess === 'object' ? guess.title : guess;
     $('#guess-input').value = ''; state.selected = null;
-    if (state.attempt === CLIP_LENGTHS.length - 1) reveal(false);
-    else { state.attempt++; updateAttempt(); $('#feedback').textContent = `“${title}” isn’t the one. You’ve unlocked ${CLIP_LENGTHS[state.attempt]} seconds. Give it another listen.`; updateControls(); }
+    if (state.attempt === activeClips().length - 1) reveal(false);
+    else { state.attempt++; updateAttempt(); $('#feedback').textContent = `“${title}” isn’t the one. You’ve unlocked ${activeClips()[state.attempt]} seconds. Give it another listen.`; updateControls(); }
   }
 });
 $('#skip-button').addEventListener('click', async () => {
   if (state.revealed || state.loading) return;
   if (!target()) { $('#feedback').textContent = 'Press play to start your first song.'; return; }
   stopAudio(); closeSuggestions();
-  if (state.attempt === CLIP_LENGTHS.length - 1) reveal(false);
-  else { state.attempt++; updateAttempt(); $('#play-caption').textContent = 'A little more to go on. Press play.'; $('#feedback').textContent = `${CLIP_LENGTHS[state.attempt]} seconds unlocked. The next guess is worth ${currentPoints().toLocaleString()} points.`; updateControls(); }
+  if (state.attempt === activeClips().length - 1) reveal(false);
+  else { state.attempt++; updateAttempt(); $('#play-caption').textContent = 'A little more to go on. Press play.'; $('#feedback').textContent = `${activeClips()[state.attempt]} seconds unlocked. The next guess is worth ${currentPoints().toLocaleString()} points.`; updateControls(); }
 });
 $('#hint-button').addEventListener('click', () => {
   if (!target()) { $('#feedback').textContent = 'Start the song first. Then we’ll give you a little nudge.'; return; }
-  if (state.hinted || state.revealed) return;
+  if (state.hinted || state.revealed || !difficultyRules(state.difficulty).hints) return;
   state.hinted = true;
   const song = target();
   $('#feedback').textContent = `A little nudge: ${song.genre} · ${song.year}. The title begins with “${song.title[0]}” and has ${song.title.trim().split(/\s+/).length} word(s).`;
@@ -333,14 +345,14 @@ function reveal(correct) {
   const song = target();
   const points = correct ? currentPoints() : 0;
   state.score += points; state.streak = correct ? state.streak + 1 : 0; state.maxStreak = Math.max(state.streak, state.maxStreak);
-  state.results.push({ title: song.title, artist: song.artist, correct, points, seconds: CLIP_LENGTHS[state.attempt] });
+  state.results.push({ title: song.title, artist: song.artist, correct, points, seconds: activeClips()[state.attempt] });
   $('#result').hidden = false; $('#result').classList.toggle('lost', !correct);
   $('#result').innerHTML = `<div class="result-art">${icon(correct ? 'check' : 'music')}</div><div><small>${correct ? 'THAT’S THE ONE!' : 'ONE FOR YOUR PLAYLIST'}</small><h3>${escape(song.title)}</h3><p>${escape(song.artist)} · ${escape(song.year)}</p></div><span class="result-points">${correct ? `+${points.toLocaleString()}` : '✳'}</span>`;
   $('#guess-form').hidden = true; $('#feedback').textContent = '';
   $('#next-button').hidden = false;
   $('#next-button').innerHTML = `${state.round === state.deck.length - 1 ? 'See my results' : 'Next song'} ${icon('arrow')}`;
   $('#game-title').textContent = correct ? 'Look at those listening skills.' : 'Good music. Even when it gets you.';
-  $('#game-subtitle').textContent = correct ? `You got it in ${CLIP_LENGTHS[state.attempt]} ${CLIP_LENGTHS[state.attempt] === 1 ? 'second' : 'seconds'}. Nicely done.` : 'Save that one to your memory. There’s always another song.';
+  $('#game-subtitle').textContent = correct ? `You got it in ${activeClips()[state.attempt]} ${activeClips()[state.attempt] === 1 ? 'second' : 'seconds'}. Nicely done.` : 'Save that one to your memory. There’s always another song.';
   $('#play-caption').textContent = 'Play the longer clip. You’ve earned it.';
   renderPlayback();
   renderSession(); updateControls(); $('#next-button').focus({ preventScroll: true });
@@ -362,22 +374,23 @@ function finishSession() {
   $('#next-button').innerHTML = `View session results ${icon('arrow')}`;
 }
 
-function requestRestart(mode, label, artist = '', tracks = null, filters = null, rounds = selectedRounds(), artists = []) {
+function requestRestart(mode, label, artist = '', tracks = null, filters = null, rounds = selectedRounds(), artists = [], difficulty = $('#regular-difficulty').value, chartSongs = []) {
   if (rounds === null) return;
   if (!state.finished && (state.results.length || state.listened || state.attempt > 0)) {
-    pendingRestart = { mode, label, artist, tracks, filters, rounds, artists };
+    pendingRestart = { mode, label, artist, tracks, filters, rounds, artists, difficulty, chartSongs };
     openModal(`<h2 id="modal-title">A fresh set of songs?</h2><p>Your current session will end. Completed sessions stay in your stats.</p><div class="confirm-actions"><button class="outline-button" data-action="cancel-restart">Keep playing</button><button class="primary-button" data-action="confirm-restart">Start new mix ${icon('arrow')}</button></div>`);
     return;
   }
-  restart(mode, label, artist, tracks, filters, rounds, artists);
+  restart(mode, label, artist, tracks, filters, rounds, artists, difficulty, chartSongs);
 }
-function restart(mode, label, artist = '', tracks = null, filters = null, rounds = 5, artists = []) {
+function restart(mode, label, artist = '', tracks = null, filters = null, rounds = 5, artists = [], difficulty = 'regular', chartSongs = []) {
   stopAudio(); state.generation++; loadingDeck = null;
   if (tracks) {
     state.localTracks.forEach(track => { if (!tracks.some(item => item.id === track.id)) URL.revokeObjectURL(track.preview); });
     state.localTracks = tracks;
   }
-  Object.assign(state, { mode, label, artist, filters: filters || emptyFilters(), roundSetting: rounds, requestedRounds: chooseRounds(rounds), playlist: cleanArtists(artists), searchPool: [], deck: [], round: 0, attempt: 0, hinted: false, revealed: false, listened: false, results: [], score: 0, streak: 0, maxStreak: 0, loading: false, selected: null, finished: false });
+  Object.assign(state, { mode, label, artist, difficulty: mode === 'everything' && DIFFICULTIES[difficulty] ? difficulty : 'regular', chartSongs: [...chartSongs], filters: filters || emptyFilters(), roundSetting: rounds, requestedRounds: chooseRounds(rounds), playlist: cleanArtists(artists), searchPool: [], deck: [], round: 0, attempt: 0, hinted: false, revealed: false, listened: false, results: [], score: 0, streak: 0, maxStreak: 0, loading: false, selected: null, finished: false });
+  if (mode === 'everything') { $('#regular-difficulty').value = state.difficulty; renderDifficultyDescription(); }
   syncRoundControls(rounds);
   filterDraft = { ...state.filters };
   renderFilters(mode === 'filtered' ? 'Mix applied. Press play to discover your songs.' : 'Pick a decade, a genre, or a favorite. Mix them together.');
@@ -399,6 +412,54 @@ function syncRoundControls(rounds) {
   $('#custom-round-count').disabled = preset;
   if (!preset) $('#custom-round-count').value = String(rounds);
 }
+function renderDifficultyDescription() {
+  $('#difficulty-description').textContent = difficultyRules($('#regular-difficulty').value).description;
+}
+$('#regular-difficulty').addEventListener('change', renderDifficultyDescription);
+$('#play-regular-mix').addEventListener('click', () => requestRestart('everything', 'The everything mix'));
+
+let trendingChart = null;
+let chartGeneration = 0;
+const chartCountryName = code => code === 'gb' ? 'United Kingdom' : 'United States';
+function chartStamp(chart) { return chart.updated ? `Updated ${new Date(chart.updated).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}` : 'Chart update time not supplied'; }
+async function refreshTrending() {
+  songPreviews.stop();
+  const token = ++chartGeneration;
+  const country = $('#trending-country').value;
+  trendingChart = null; $('#trending-songs').hidden = true; $('#view-trending').hidden = true; $('#play-trending').disabled = true;
+  $('#load-trending').disabled = true; $('#trending-country').disabled = true;
+  $('#trending-status').textContent = `Loading the ${chartCountryName(country)} iTunes Top Songs chart…`;
+  try {
+    const chart = await loadTrendingChart(country, true);
+    if (token !== chartGeneration) return;
+    trendingChart = chart;
+    $('#trending-status').textContent = `${chartCountryName(chart.country)} · iTunes Top Songs · ${chartStamp(chart)} · ${chart.songs.length} ranked songs. Preview availability varies by track.`;
+    $('#trending-songs').hidden = false;
+    songPreviews.render($('#trending-songs'), chart.songs, 'Trending songs', { heading: 'Chart highlights', ranked: true, showArtist: true });
+    $('#view-trending').hidden = false;
+    $('#play-trending').disabled = !chart.songs.some(song => song.preview);
+    $('#load-trending').textContent = 'Refresh chart';
+  } catch (error) {
+    if (token !== chartGeneration) return;
+    $('#trending-status').textContent = `${error.message} No chart is being shown. Use Retry chart to try again.`;
+    $('#load-trending').textContent = 'Retry chart';
+  } finally {
+    if (token === chartGeneration) { $('#load-trending').disabled = false; $('#trending-country').disabled = false; }
+  }
+}
+$('#load-trending').addEventListener('click', refreshTrending);
+$('#trending-country').addEventListener('change', refreshTrending);
+$('#view-trending').addEventListener('click', () => {
+  if (!trendingChart) return;
+  openModal(`<h2 id="modal-title">Trending in the ${trendingChart.country === 'gb' ? 'UK' : 'US'}.</h2><p>Apple iTunes Top Songs · ${escape(chartStamp(trendingChart))}. Tap a track to preview it.</p><div id="full-trending-chart" class="trending-chart full-trending-chart"></div><button type="button" class="primary-button modal-full-button" data-action="close">Back to the game ${icon('arrow')}</button>`);
+  songPreviews.render($('#full-trending-chart'), trendingChart.songs, 'Trending chart', { limit: 25, heading: 'Top songs', ranked: true, showArtist: true });
+});
+$('#play-trending').addEventListener('click', () => {
+  const rounds = selectedRounds();
+  if (!trendingChart || rounds === null) return;
+  const label = `Trending · ${trendingChart.country.toUpperCase()} iTunes chart`;
+  requestRestart('trending', label, '', null, emptyFilters(), rounds, [], 'regular', trendingChart.songs);
+});
 $('#rounds-select').addEventListener('change', () => {
   const custom = $('#rounds-select').value === 'custom';
   $('#custom-rounds').hidden = !custom; $('#custom-round-count').disabled = !custom;
@@ -693,7 +754,8 @@ modal.addEventListener('close', () => {
   uploading = [];
 });
 function showHow() {
-  openModal(`<h2 id="modal-title">A little sound. A big clue.</h2><p>No lyrics on the screen. No album cover to give it away.<br>Just you, your ears, and that “I know this” feeling.</p><div class="how-step"><span class="step-number">01</span><div><strong>Press play. Listen close.</strong><p>You start with a 0.1-second clip. Replay it as often as you like.</p></div></div><div class="how-step"><span class="step-number">02</span><div><strong>Name that song.</strong><p>Type the title, or search and pick a match. Get it in 0.1 seconds for 1,000 points.</p></div></div><div class="how-step"><span class="step-number">03</span><div><strong>Need another beat?</strong><p>Skip or guess wrong to unlock 0.5, 1, 3, 5, 10, then 15 seconds. Longer clips mean fewer points. A hint costs 150 points, with a 50-point minimum.</p></div></div><div class="modal-note">Choose your round count above. Seven chances per song. Your stats are saved in this browser after a full session. Press <b>/</b> to jump to the search box.</div><button class="primary-button modal-full-button" data-action="close">Let’s play ${icon('arrow')}</button>`);
+  const rules = difficultyRules(state.difficulty);
+  openModal(`<h2 id="modal-title">A little sound. A big clue.</h2><p>No lyrics on the screen. No album cover to give it away.<br>Just you, your ears, and that “I know this” feeling.</p><div class="how-step"><span class="step-number">01</span><div><strong>Press play. Listen close.</strong><p>You start with a ${rules.clips[0]}-second clip. Replay it as often as you like.</p></div></div><div class="how-step"><span class="step-number">02</span><div><strong>Name that song.</strong><p>Type the title, or search and pick a match. A first-guess answer earns ${difficultyPoints(state.difficulty, 0).toLocaleString()} points.</p></div></div><div class="how-step"><span class="step-number">03</span><div><strong>Need another beat?</strong><p>Skip or guess wrong to unlock ${rules.clips.slice(1).join(', ')} seconds. Longer clips mean fewer points. ${rules.hints ? 'A hint costs 150 points, with a 50-point minimum.' : 'Hints are off on Hard difficulty.'}</p></div></div><div class="modal-note">${rules.clips.length} chances per song in this mix. Change difficulty for the regular mix above, then press <b>Play regular mix</b>. Your stats are saved in this browser after a full session. Press <b>/</b> to jump to the search box.</div><button class="primary-button modal-full-button" data-action="close">Let’s play ${icon('arrow')}</button>`);
 }
 function showStats() {
   openModal(`<h2 id="modal-title">Your listening history.</h2><p>A little proof that you know your music.<br>Stats from completed sessions on this browser.</p><div class="stats-grid"><div class="stat-box"><strong>${stats.games}</strong><span>Sessions played</span></div><div class="stat-box"><strong>${stats.rounds ? Math.round(stats.correct / stats.rounds * 100) : 0}%</strong><span>Songs guessed correctly</span></div><div class="stat-box"><strong>${stats.bestScore.toLocaleString()}</strong><span>Personal best score</span></div><div class="stat-box"><strong>${stats.bestStreak}</strong><span>Best song streak</span></div></div><div class="modal-note">${stats.games ? `${stats.correct} of ${stats.rounds} songs guessed. Keep the good music going.` : 'Your first session is waiting. Finish a mix and your numbers will appear here.'}</div><button class="primary-button modal-full-button" data-action="close">Back to the music ${icon('arrow')}</button>`);
@@ -734,8 +796,8 @@ document.addEventListener('click', async event => {
     requestRestart('local', 'Your own tracks', '', [...uploading]);
   }
   if (action === 'cancel-restart') { pendingRestart = null; closeModal(); }
-  if (action === 'confirm-restart' && pendingRestart) { const config = pendingRestart; pendingRestart = null; restart(config.mode, config.label, config.artist, config.tracks, config.filters, config.rounds, config.artists); }
-  if (action === 'again') restart(state.mode, state.label, state.artist, null, state.filters, state.roundSetting, state.playlist);
+  if (action === 'confirm-restart' && pendingRestart) { const config = pendingRestart; pendingRestart = null; restart(config.mode, config.label, config.artist, config.tracks, config.filters, config.rounds, config.artists, config.difficulty, config.chartSongs); }
+  if (action === 'again') restart(state.mode, state.label, state.artist, null, state.filters, state.roundSetting, state.playlist, state.difficulty, state.chartSongs);
   if (action === 'share') {
     const text = `Offbeat · ${state.label}\n${state.results.map(result => result.correct ? '🟩' : '⬜').join('')}\n${state.score.toLocaleString()} points · ${state.results.filter(result => result.correct).length}/${state.results.length} songs\nHow soon do you know the song?`;
     try { await navigator.clipboard.writeText(text); toast('Results copied. Bragging rights are yours.'); } catch { toast('Copy isn’t available in this browser. Your score: ' + state.score.toLocaleString() + ' points.'); }

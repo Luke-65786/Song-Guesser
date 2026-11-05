@@ -57,6 +57,7 @@
         <div class="custom-rounds" id="custom-rounds" hidden><label for="custom-round-count">How many rounds?</label><input id="custom-round-count" type="number" min="1" max="50" step="1" value="5" required disabled><span>Choose 1–50. Shorter libraries use the available songs.</span></div>
       </form>
       <div class="filter-footer"><span id="filter-status" role="status">Pick a decade, a genre, or a favorite. Mix them together.</span><button type="button" id="reset-filters">Reset filters</button></div>
+      <div class="regular-difficulty-row"><label for="regular-difficulty">Regular mix difficulty<select id="regular-difficulty"><option value="easy">Easy</option><option value="regular" selected>Regular</option><option value="hard">Hard</option></select></label><div><p id="difficulty-description">Start at 0.1 seconds · 7 chances · hints available · up to 1,000 points.</p><small>Only applies to the regular everything mix. Artist, playlist, album, filtered, demo, and trending mixes keep the standard rules.</small></div><button type="button" class="outline-button" id="play-regular-mix">Play regular mix</button></div>
     </section>
     <section class="artist-library" aria-labelledby="artist-library-title">
       <div class="artist-library-header"><div><h2 id="artist-library-title">Your artist playlist</h2><p>Build a lineup. Shuffle their songs together.</p></div><div class="artist-library-actions"><button type="button" class="outline-button" id="find-playlist-artists"><svg aria-hidden="true"><use href="#i-plus"/></svg>Find artists</button><button type="button" class="outline-button" id="liked-artists-button" aria-haspopup="dialog"><svg aria-hidden="true"><use href="#i-heart"/></svg>Liked <span id="liked-count">0</span></button></div></div>
@@ -70,7 +71,7 @@
 
     <section class="play-layout" id="game" aria-label="Song guessing game">
       <div class="game-card">
-        <div class="game-topline"><button class="mix-label" id="change-mix"><svg><use href="#i-shuffle"/></svg><span id="mix-label">The everything mix</span><span class="chevron">⌄</span></button><span class="round-indicator">ROUND <b id="round-number">01</b><span> / <span id="round-total">05</span></span></span></div>
+        <div class="game-topline"><div class="game-mix-meta"><button class="mix-label" id="change-mix"><svg><use href="#i-shuffle"/></svg><span id="mix-label">The everything mix</span><span class="chevron">⌄</span></button><span class="difficulty-badge" id="difficulty-badge">Regular</span></div><span class="round-indicator">ROUND <b id="round-number">01</b><span> / <span id="round-total">05</span></span></span></div>
         <div class="question-row"><div><h2 id="game-title">What's the track?</h2><p id="game-subtitle">A familiar tune. A tiny snippet. You’ve got this.</p></div><span class="points-pill"><svg><use href="#i-star"/></svg><span id="available-points">1,000</span> pts up for grabs</span></div>
 
         <div class="audio-player" id="audio-player">
@@ -97,6 +98,8 @@
         <div class="tip-card"><span class="tip-icon">✳︎</span><div><strong>A tip for your ears</strong><p>Headphones on. World off.<br>Sometimes it’s all in the bassline.</p></div></div>
       </aside>
     </section>
+
+    <section class="trending-section" aria-labelledby="trending-heading"><div class="trending-header"><div><h2 id="trending-heading">Trending songs</h2><p>Browse the live iTunes Top Songs chart, preview tracks, or play a chart mix.</p></div><div class="trending-controls"><label for="trending-country">Chart<select id="trending-country"><option value="us">United States</option><option value="gb">United Kingdom</option></select></label><button type="button" class="outline-button" id="load-trending">Load latest chart</button><button type="button" class="primary-button" id="play-trending" disabled>Play chart <svg aria-hidden="true"><use href="#i-shuffle"/></svg></button></div></div><p id="trending-status" class="trending-status" role="status">Load the chart to see its latest published rankings. Source: Apple iTunes Top Songs.</p><div id="trending-songs" class="trending-chart" hidden></div><button type="button" class="outline-button" id="view-trending" hidden>View full chart</button></section>
 
     <section class="mix-section" aria-labelledby="mix-heading"><div class="mix-section-heading"><h2 id="mix-heading">Your music. Your kind of challenge.</h2><span>Find your frequency <svg><use href="#i-arrow"/></svg></span></div><div class="mix-cards">
       <button class="mix-card" data-preset="everything"><span class="mix-card-icon peach"><svg><use href="#i-shuffle"/></svg></span><span><strong>A little bit of everything</strong><small>Big hits, deep cuts, all the good stuff.</small></span><svg class="card-arrow"><use href="#i-arrow"/></svg></button>

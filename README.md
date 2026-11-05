@@ -32,6 +32,7 @@ The publishing script uses Git and Node without extra dependencies, keeps public
 - **Everything mix:** randomly selected songs from popular artists in the US iTunes catalog.
 - **Artist mix:** search an artist, preview their songs, and play a mix at your chosen length.
 - **Artist playlist:** add several artists to your saved lineup and shuffle their songs together.
+- **Trending songs:** load the latest US or UK iTunes Top Songs chart, preview tracks, and play a mix of its available audio previews.
 - **Your own tracks:** select or drag in audio files, with filenames such as `Artist - Song title.mp3`. Audio stays on the device using object URLs; nothing is uploaded. This is the way to play songs outside the catalog. Have a friend choose the files to keep the answers a surprise.
 - **Offline demo:** five included original instrumental loops. Open “Meet the tracks” to hear and learn the demos first. These are original synthesized tunes, not commercial song recordings.
 
@@ -53,15 +54,19 @@ The **song guessing search follows the active mix**. Artist and album mixes only
 
 Song/artist/album words can be typed in any order, and search matching supports accents and non-Latin names. Loaded artist/album/playlist pools are searched locally, so those suggestions remain usable if the catalog temporarily becomes unreachable. Searches discard replies for an older query or mix rather than showing stale results.
 
-Clips unlock at **0.1, 0.5, 1, 3, 5, 10, and 15 seconds**. Correct answers earn 1,000, 900, 800, 600, 400, 250, or 100 points respectively. A hint deducts 150 points, with a minimum award of 50. Replay a clip freely, submit a typed title or pick a search result, and skip to unlock more audio. After seven attempts, the song is revealed; replays after a reveal are capped at 15 seconds. Playback is a single progress line with fractional time labels, and the session/leaderboard sidebar is hidden. Personal stats remain available through **Your stats**. Completed-session stats are stored in this browser's localStorage. Local libraries and in-progress sessions do not persist after reload.
+For the everything mix, choose **Regular mix difficulty**, then **Play regular mix**. **Easy** uses 1, 3, 5, 10, and 15 seconds with five chances and hints. **Regular** uses 0.1, 0.5, 1, 3, 5, 10, and 15 seconds with seven chances and hints. **Hard** uses 0.1, 0.5, 1, 3, and 5 seconds with five chances and no hints. Only the regular everything mix uses this choice; artist, playlist, album, filtered, demo, uploaded, and trending mixes keep the standard seven intervals. The badge shows the active difficulty. Changing the selector is a draft until a new regular mix starts, and **Play again** retains the completed session's difficulty.
+
+Correct answers earn 1,000, 900, 800, 600, 400, 250, or 100 points for 0.1, 0.5, 1, 3, 5, 10, or 15 seconds respectively, so Easy starts at 800 points. A hint deducts 150 points, with a minimum award of 50. Replay a clip freely, submit a typed title or pick a search result, and skip to unlock more audio. After the available chances, the song is revealed; replays after a reveal are capped at 15 seconds. Playback is a single progress line with fractional time labels, and the session/leaderboard sidebar is hidden. Personal stats remain available through **Your stats**. Completed-session stats are stored in this browser's localStorage. Local libraries and in-progress sessions do not persist after reload.
+
+The **Trending songs** section loads Apple's public **iTunes Top Songs** chart on request, showing the region, source, and feed update time. It shows five highlights; **View full chart** opens up to 25 ranked songs. **Refresh chart** checks the feed again, and changing country loads that region's chart. Rankings are the source chart's published positions, not a streaming-service ranking. Tracks without previews remain visible with disabled controls. **Play chart** shuffles only playable entries using the selected round count; its guessing search stays within those entries. Refreshing the chart does not change an active game. A failed load clears the old list and offers **Retry chart** instead of presenting stale or invented rankings.
 
 Keyboard support: `/` focuses the guess input, arrow keys navigate search results, Enter selects or submits, and Escape closes a dialog or suggestions. Reduced motion and mobile layouts are supported.
 
 ## Catalog access
 
-The app uses Apple's public iTunes Search API via browser-side JSONP. It requires access to:
+The app uses Apple's public iTunes Search API via browser-side JSONP. Charts use the public country-specific iTunes RSS JSON feed, with a JSONP fallback when browser fetch is unavailable. It requires access to:
 
-- `itunes.apple.com` for catalog search
+- `itunes.apple.com` for catalog search and Top Songs charts
 - `audio-ssl.itunes.apple.com` for preview audio
 
 No server-side API proxy or credentials are needed. Catalog coverage, regional restrictions, preview availability, rate limits, and browser media codec support can affect which songs work. The service does **not** promise every released song. Bring your own audio for any track you have. Network and media failures show recovery choices; the demo and local library work without external services.
@@ -84,6 +89,7 @@ python3 scripts/browser-playback.py
 python3 scripts/browser-artist-previews.py
 python3 scripts/browser-artist-library.py
 python3 scripts/browser-search-scope.py
+python3 scripts/browser-difficulty-trending.py
 ```
 
 Override `CHROMIUM_PATH` or `OFFBEAT_TEST_URL` if needed. These tests play real local audio and exercise sessions, timing, uploads, saved stats, network failure recovery, desktop/mobile layouts, and a **mocked** catalog response. Screenshots are written to `/tmp/offbeat-desktop.png` and `/tmp/offbeat-mobile.png`. A mocked catalog test does not establish that Apple's live service is reachable.
@@ -97,6 +103,8 @@ The artist-preview suite uses mocked catalog data and actual included audio to v
 The artist-library suite checks custom/random round choices, validation, complete sessions at different lengths, balanced artist selection, uniqueness, persistent likes and playlist edits, both shuffle actions, active-session snapshots, network failure recovery, and phone/tablet/desktop layouts. Catalog metadata is mocked, while playback uses the included audio. Screenshots are `/tmp/offbeat-library-mobile.png` and `/tmp/offbeat-liked-artists-mobile.png`.
 
 The scoped-search suite verifies artist/album membership, combined genre/era filtering, playlist snapshots, full-pool suggestions beyond a one-round session, cached search, local/demo and unrestricted catalog modes, stale-response protection, and mobile layout. Catalog results deliberately include unrelated artists and releases to check they are excluded. Metadata is mocked and any playback uses local audio. Its screenshot is `/tmp/offbeat-scoped-search-mobile.png`.
+
+The difficulty/trending suite checks Easy scoring and hints, Hard's 5-second cutoff and five chances, replay/cancel behavior, standard rules for other mixes, chart rankings and source dates, unavailable previews, chart-scoped games, country switching, stable active games, fetch/JSONP fallback, retries, and 320px/390px/desktop layouts. It uses sample chart responses and real included audio. Screenshots are `/tmp/offbeat-difficulty-trending-desktop.png` and `/tmp/offbeat-difficulty-trending-mobile.png`. Live Apple chart access was blocked by the cloud workspace's network policy, so these checks do not verify live feed availability.
 
 ## Assets
 
