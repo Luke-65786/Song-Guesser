@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#111410">
+  <meta name="theme-color" content="#1c1f26">
   <meta name="color-scheme" content="dark">
   <meta name="description" content="A little sound. A big clue. Guess the song from a tiny clip. Play artist mixes, explore a music catalog, or bring your own tracks.">
   <title>Offbeat — Name that feeling. Guess that song.</title>
@@ -14,6 +14,7 @@
 </head>
 <body>
   <svg class="svg-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 2v20M2 12h20M5 5l14 14M5 19 19 5"/></symbol>
     <symbol id="i-logo" viewBox="0 0 24 24"><path d="M4 10v5M9 6v13M14 3v18M19 8v9"/></symbol>
     <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
     <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="m17 3 4 4-4 4m0 2 4 4-4 4M3 7h3c5 0 7 10 12 10h3M3 17h3c2 0 3.5-2 5-5m2-3c1.5-1.5 3-2 5-2h3"/></symbol>
@@ -41,7 +42,7 @@
 
   <main class="page">
     <section class="mix-toolbar" aria-label="Customize your music mix">
-      <div class="toolbar-heading"><span class="tiny-spark" aria-hidden="true">✳</span><div><strong>Find your mix</strong><span>Make it your kind of music.</span></div></div>
+      <div class="toolbar-heading"><span class="tiny-spark" aria-hidden="true"><svg><use href="#i-spark"/></svg></span><div><strong>Find your mix</strong><span>Make it your kind of music.</span></div></div>
       <form id="mix-filters" class="filter-form">
         <label class="filter-field"><span>Era</span><select id="era-filter" aria-label="Era"><option value="">All eras</option></select><span class="filter-chevron" aria-hidden="true">⌄</span></label>
         <label class="filter-field"><span>Genre</span><select id="genre-filter" aria-label="Genre"><option value="">All genres</option></select><span class="filter-chevron" aria-hidden="true">⌄</span></label>
@@ -52,8 +53,8 @@
       <div class="filter-footer"><span id="filter-status" role="status">Pick a decade, a genre, or a favorite. Mix them together.</span><button type="button" id="reset-filters">Reset filters</button></div>
     </section>
     <section class="hero" aria-labelledby="hero-title">
-      <div class="hero-copy"><div class="eyebrow"><span class="tiny-spark">✳</span> SMALL CLIPS. BIG MUSIC ENERGY.</div><h1 id="hero-title">You know the song.<br>But how <span class="accent-word">soon<svg viewBox="0 0 190 15" aria-hidden="true"><path d="M3 10C55 1 122 2 185 6M12 14c54-7 111-7 160-5"/></svg></span>?</h1><p>Put your ears to the test. Start with just 0.1 seconds.</p></div>
-      <div class="hero-art" aria-hidden="true"><span class="art-spark spark-one">✳</span><span class="art-spark spark-two">+</span><div class="album-sleeve"><span class="sleeve-top">OFFBEAT RECORDS</span><div class="sleeve-circle"></div><span class="sleeve-bottom">FOR THE LOVE<br>OF THE FIRST NOTE.</span><span class="sleeve-number">VOL.<br><b>01</b></span></div><div class="vinyl"><div class="vinyl-label"><svg><use href="#i-logo"/></svg><i></i></div></div><span class="art-caption">less thinking, more listening.</span><svg class="art-arrow" viewBox="0 0 100 50"><path d="M4 37c42 22 74-3 70-29m-8 9 8-11 9 12"/></svg></div>
+      <div class="hero-copy"><div class="eyebrow"><span class="tiny-spark" aria-hidden="true"><svg><use href="#i-spark"/></svg></span> SMALL CLIPS. BIG MUSIC ENERGY.</div><h1 id="hero-title">You know the song.<br>But how <span class="accent-word">soon<svg viewBox="0 0 190 15" aria-hidden="true"><path d="M3 10C55 1 122 2 185 6M12 14c54-7 111-7 160-5"/></svg></span>?</h1><p>Put your ears to the test. Start with just 0.1 seconds.</p></div>
+      <div class="hero-art" aria-hidden="true"><span class="art-spark spark-one"><svg><use href="#i-spark"/></svg></span><span class="art-spark spark-two">+</span><div class="album-sleeve"><span class="sleeve-top">OFFBEAT RECORDS</span><div class="sleeve-circle"></div><span class="sleeve-bottom">FOR THE LOVE<br>OF THE FIRST NOTE.</span><span class="sleeve-number">VOL.<br><b>01</b></span></div><div class="vinyl"><div class="vinyl-label"><svg><use href="#i-logo"/></svg><i></i></div></div><span class="art-caption">less thinking, more listening.</span><svg class="art-arrow" viewBox="0 0 100 50"><path d="M4 37c42 22 74-3 70-29m-8 9 8-11 9 12"/></svg></div>
     </section>
 
     <section class="play-layout" id="game" aria-label="Song guessing game">
@@ -72,7 +73,7 @@
         <div id="result" class="result" hidden aria-live="polite"></div>
         <form id="guess-form" autocomplete="off">
           <label class="sr-only" for="guess-input">Song title or artist</label>
-          <div class="guess-row"><div class="search-wrap"><svg><use href="#i-search"/></svg><input id="guess-input" placeholder="Know it? Search for a song or artist…" role="combobox" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false" maxlength="150"><kbd>/</kbd><div id="suggestions" class="suggestions" role="listbox" aria-label="Song suggestions" hidden></div></div><button class="primary-button" id="guess-button" type="submit">Guess <svg><use href="#i-arrow"/></svg></button></div>
+          <div class="guess-row"><div class="search-wrap"><svg><use href="#i-search"/></svg><input id="guess-input" placeholder="Song title or artist…" role="combobox" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false" maxlength="150"><kbd>/</kbd><div id="suggestions" class="suggestions" role="listbox" aria-label="Song suggestions" hidden></div></div><button class="primary-button" id="guess-button" type="submit">Guess <svg><use href="#i-arrow"/></svg></button></div>
           <div class="game-bottom"><button class="text-button" id="hint-button" type="button"><svg><use href="#i-bulb"/></svg>Need a hint?<span>−150 pts</span></button><button class="skip-button" id="skip-button" type="button">Skip <span>(+0.4 seconds)</span><svg><use href="#i-skip"/></svg></button></div>
         </form>
         <div id="feedback" class="feedback" role="status" aria-live="polite"></div>
@@ -81,7 +82,7 @@
 
       <aside class="session-column" aria-label="Session progress" hidden>
         <div class="session-card"><div class="section-label">YOUR SESSION <span class="session-dot"></span></div><div class="session-stats"><div><span><svg><use href="#i-star"/></svg> Score</span><strong id="score">0</strong></div><div><span><svg><use href="#i-fire"/></svg> Streak</span><strong id="streak">0<span> songs</span></strong></div></div><div class="round-list" id="round-list"></div><div class="session-footer"><svg><use href="#i-headphones"/></svg> Five songs. Infinite bragging rights.</div></div>
-        <div class="tip-card"><span class="tip-icon">✳</span><div><strong>A tip for your ears</strong><p>Headphones on. World off.<br>Sometimes it’s all in the bassline.</p></div></div>
+        <div class="tip-card"><span class="tip-icon">✳︎</span><div><strong>A tip for your ears</strong><p>Headphones on. World off.<br>Sometimes it’s all in the bassline.</p></div></div>
       </aside>
     </section>
 
@@ -90,7 +91,7 @@
       <button class="mix-card" data-preset="artist"><span class="mix-card-icon lilac"><svg><use href="#i-music"/></svg></span><span><strong>For the superfans</strong><small>Pick an artist. Prove you know them.</small></span><svg class="card-arrow"><use href="#i-arrow"/></svg></button>
       <button class="mix-card" data-preset="upload"><span class="mix-card-icon sage"><svg><use href="#i-upload"/></svg></span><span><strong>Bring your own tracks</strong><small>Your library, a whole new way to play.</small></span><svg class="card-arrow"><use href="#i-arrow"/></svg></button>
     </div></section>
-    <footer class="site-footer"><span class="footer-tagline">Less scrolling. More <svg><use href="#i-music"/></svg> <b>“I know this one!”</b></span><span>Made with good taste. And a little obsession.</span><button id="demo-button">Try the offline demo <span>↗</span></button></footer>
+    <footer class="site-footer"><span class="footer-tagline">Less scrolling. More <svg><use href="#i-music"/></svg> <b>“I know this one!”</b></span><span>Made with good taste. And a little obsession.</span><button id="demo-button">Try the offline demo <svg aria-hidden="true"><use href="#i-arrow"/></svg></button></footer>
   </main>
 
   <dialog id="modal" aria-labelledby="modal-title"><div class="modal-header"><span class="brand-icon small"><svg><use href="#i-logo"/></svg></span><button class="icon-button" id="close-modal" aria-label="Close dialog"><svg><use href="#i-close"/></svg></button></div><div id="modal-body"></div></dialog>
