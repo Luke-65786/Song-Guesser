@@ -133,6 +133,8 @@ with sync_playwright() as p:
     catalog_page.goto(BASE, wait_until='networkidle')
     catalog_page.locator('[data-preset="artist"]').click()
     catalog_page.locator('[data-artist="Queen"]').click()
+    expect(catalog_page.locator('#artist-song-previews .song-preview-row')).to_have_count(5)
+    catalog_page.locator('#start-artist-mix').click()
     expect(catalog_page.locator('#mix-label')).to_have_text('Queen mix')
     listen(catalog_page)
     guess_current(catalog_page)

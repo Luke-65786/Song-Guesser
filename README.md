@@ -38,6 +38,8 @@ The top **Find your mix** bar lets you combine an **Era** (1960s–2020s), **Gen
 
 The interface uses charcoal and blue-gray surfaces with lavender accents, inspired by Windows dark settings. Text, inputs, filters, playback controls, and dialogs are enlarged for readability. **Skip** is a filled secondary button with a 56-pixel minimum height; on phones it spans the full width below Guess.
 
+Artist searches include **Song previews**: up to five playable tracks with titles, album/year details, and Play/Pause controls. The first artist result loads its song list automatically, without playing audio; use **Preview songs** to expand another artist. In the artist-mix search, preview the songs and then press **Play this artist mix**. Only one preview plays at a time, with a 15-second limit. Changing the search, choosing an artist, starting a mix, or closing the dialog stops preview playback. Browsing uses a separate audio player and does not change game attempts or scores. Preview and catalog failures offer recovery choices, and some artists may have no playable previews.
+
 All selected filters must match. Artist and album IDs determine membership, and decades use catalog release dates (which can differ for reissues). Discovery mixes sample catalog searches around artists in the selected era/genre; they are not an exhaustive list of all matching songs. Sessions contain up to five available previews. An empty combination asks you to broaden the filters rather than substituting unrelated songs. The interface always uses the dark theme, including native inputs and dialogs, regardless of system preferences.
 
 Clips unlock at **0.1, 0.5, 1, 3, 5, 10, and 15 seconds**. Correct answers earn 1,000, 900, 800, 600, 400, 250, or 100 points respectively. A hint deducts 150 points, with a minimum award of 50. Replay a clip freely, submit a typed title or pick a search result, and skip to unlock more audio. After seven attempts, the song is revealed; replays after a reveal are capped at 15 seconds. Playback is a single progress line with fractional time labels, and the session/leaderboard sidebar is hidden. Personal stats remain available through **Your stats**. Completed-session stats are stored in this browser's localStorage. Local libraries and in-progress sessions do not persist after reload.
@@ -68,6 +70,7 @@ For browser integration tests, run the app in a second terminal and use an envir
 python3 scripts/browser-smoke.py
 python3 scripts/browser-filters.py
 python3 scripts/browser-playback.py
+python3 scripts/browser-artist-previews.py
 ```
 
 Override `CHROMIUM_PATH` or `OFFBEAT_TEST_URL` if needed. These tests play real local audio and exercise sessions, timing, uploads, saved stats, network failure recovery, desktop/mobile layouts, and a **mocked** catalog response. Screenshots are written to `/tmp/offbeat-desktop.png` and `/tmp/offbeat-mobile.png`. A mocked catalog test does not establish that Apple's live service is reachable.
@@ -75,6 +78,8 @@ Override `CHROMIUM_PATH` or `OFFBEAT_TEST_URL` if needed. These tests play real 
 The filter suite additionally checks combined and individual filters, album/artist consistency, reset, empty results, picker failures, preserving an active session, and dark styling with a light system preference. Its screenshots are `/tmp/offbeat-dark-desktop.png` and `/tmp/offbeat-dark-mobile.png`. The same suite can validate a GitHub Pages-style subpath by setting `OFFBEAT_TEST_URL` to a static server's project URL.
 
 The playback suite measures every requested clip duration using actual included audio, checks fractional labels and the line progress display, verifies seven chances and a 15-second reveal cap, and checks that the session panel is hidden on desktop and mobile. Its screenshots are `/tmp/offbeat-line-desktop.png` and `/tmp/offbeat-line-mobile.png`. Playback uses a media-clock cutoff timer alongside visual updates; timing is subject to browser scheduling.
+
+The artist-preview suite uses mocked catalog data and actual included audio to verify automatic lists without autoplay, artist identity filtering, Play/Pause/resume, the 15-second cutoff, switching songs, close/selection cleanup, empty and failed previews, retries, both artist search screens, and mobile layout. Its screenshots are `/tmp/offbeat-artist-previews-desktop.png` and `/tmp/offbeat-artist-previews-mobile.png`.
 
 ## Assets
 

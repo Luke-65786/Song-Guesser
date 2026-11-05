@@ -394,3 +394,46 @@ dialog::backdrop { background: #0a0c16b3; }
   nav { font-size: 11px; gap: 10px; }
   .header-inner { gap: 10px; }
 }
+
+/* Artist search previews share a separate player and require an explicit tap. */
+.artist-search-result { border: 1px solid #5a596b; border-radius: 9px; background: #303441; overflow: hidden; flex-shrink: 0; }
+.artist-search-result .filter-result { border: 0; border-radius: 8px 8px 0 0; background: transparent; }
+.artist-search-result .filter-result:hover { background: #454052; }
+.artist-preview-toggle { display: flex; width: 100%; min-height: 46px; align-items: center; gap: 9px; padding: 9px 16px; border-top: 1px solid #4b4b5d; color: #d6caf7; background: #393548; font-size: 14px; text-align: left; }
+.artist-preview-toggle:hover { background: #4a405c; }
+.artist-preview-toggle svg { width: 18px; height: 18px; }
+.preview-toggle-chevron { margin-left: auto; font-size: 18px; transition: transform .15s; }
+.artist-preview-toggle[aria-expanded=true] .preview-toggle-chevron { transform: rotate(180deg); }
+.artist-song-panel { padding: 15px 16px 10px; background: #242733; border-top: 1px solid #4c465e; }
+.standalone-previews { margin-top: 18px; border: 1px solid #514d63; border-radius: 9px; }
+.song-previews-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; margin-bottom: 12px; }
+.song-previews-heading h3 { margin: 0; font-size: 14px; font-weight: 600; color: #e7dff8; }
+.song-previews-heading > span { font-size: 11px; color: #bfb7d3; }
+.song-preview-list { list-style: none; padding: 0; margin: 0; }
+.song-preview-row { display: flex; align-items: center; gap: 10px; padding: 13px 0; border-bottom: 1px solid #414252; }
+.song-preview-row:last-child { border-bottom: 0; }
+.song-preview-number { width: 16px; font-size: 12px; color: #a9a0bd; text-align: center; flex-shrink: 0; }
+.song-preview-info { min-width: 0; flex: 1; }
+.song-preview-info strong { display: block; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; color: #efebf8; }
+.song-preview-info small { display: block; font-size: 12px; line-height: 1.7; color: #bdb7d0; margin-top: 2px; overflow-wrap: anywhere; }
+.song-preview-button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 86px; min-height: 44px; padding: 9px 11px; border: 1px solid #817395; border-radius: 6px; background: #43394f; color: #e8defa; font-size: 13px; flex-shrink: 0; }
+.song-preview-button:hover { background: #584867; border-color: #c1a8df; }
+.song-preview-button svg { width: 16px; height: 16px; }
+.song-preview-button[aria-pressed=true] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.song-preview-button[aria-busy=true] { color: #d2c7e4; }
+.song-preview-timing { margin-top: 10px; }
+.song-preview-line { height: 3px; border-radius: 2px; overflow: hidden; background: #535064; }
+.song-preview-fill { width: 0; height: 100%; display: block; background: var(--accent); }
+.song-preview-time { display: block; font-size: 10px; color: #c3b7d8; margin-top: 5px; font-variant-numeric: tabular-nums; }
+.song-preview-status { font-size: 12px; color: #c7bdd9; line-height: 1.8; margin: 10px 0 2px; }
+.preview-retry { margin: 10px 0; }
+#start-artist-mix + .modal-note { margin-top: 18px; }
+@media (max-width: 700px) {
+  .artist-song-panel { padding: 13px 11px 10px; }
+  .artist-preview-toggle { padding-inline: 13px; }
+  .song-preview-row { gap: 8px; }
+  .song-preview-number { display: none; }
+  .song-preview-button { min-width: 76px; padding: 9px; font-size: 12px; }
+  .song-preview-info strong { font-size: 14px; }
+  .song-preview-info small { font-size: 12px; }
+}
