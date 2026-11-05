@@ -31,6 +31,8 @@
     <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
     <symbol id="i-chart" viewBox="0 0 24 24"><path d="M5 20v-7m7 7V4m7 16V9"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M20 5c-3-3-6-1-8 1-2-2-5-4-8-1-5 5 4 12 8 15 4-3 13-10 8-15Z"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
     <symbol id="i-volume" viewBox="0 0 24 24"><path d="m11 4-6 5H2v6h3l6 5Zm4 4a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></symbol>
   </svg>
   <a class="skip-link" href="#game">Skip to the game</a>
@@ -50,9 +52,16 @@
         <label class="filter-field"><span>Genre</span><select id="genre-filter" aria-label="Genre"><option value="">All genres</option></select><span class="filter-chevron" aria-hidden="true">⌄</span></label>
         <button type="button" id="artist-filter" class="filter-field filter-picker" aria-haspopup="dialog"><span>Artists</span><strong id="artist-filter-value">Any artist</strong><span class="filter-chevron" aria-hidden="true">⌄</span></button>
         <button type="button" id="album-filter" class="filter-field filter-picker" aria-haspopup="dialog"><span>Albums</span><strong id="album-filter-value">Any album</strong><span class="filter-chevron" aria-hidden="true">⌄</span></button>
+        <label class="filter-field"><span>Rounds</span><select id="rounds-select" aria-label="Rounds"><option value="5">5 rounds</option><option value="10">10 rounds</option><option value="15">15 rounds</option><option value="20">20 rounds</option><option value="50">50 rounds</option><option value="random">Random</option><option value="custom">Custom…</option></select><span class="filter-chevron" aria-hidden="true">⌄</span></label>
         <button type="submit" class="primary-button apply-filters" id="apply-filters"><svg aria-hidden="true"><use href="#i-shuffle"/></svg>Apply mix</button>
+        <div class="custom-rounds" id="custom-rounds" hidden><label for="custom-round-count">How many rounds?</label><input id="custom-round-count" type="number" min="1" max="50" step="1" value="5" required disabled><span>Choose 1–50. Shorter libraries use the available songs.</span></div>
       </form>
       <div class="filter-footer"><span id="filter-status" role="status">Pick a decade, a genre, or a favorite. Mix them together.</span><button type="button" id="reset-filters">Reset filters</button></div>
+    </section>
+    <section class="artist-library" aria-labelledby="artist-library-title">
+      <div class="artist-library-header"><div><h2 id="artist-library-title">Your artist playlist</h2><p>Build a lineup. Shuffle their songs together.</p></div><div class="artist-library-actions"><button type="button" class="outline-button" id="find-playlist-artists"><svg aria-hidden="true"><use href="#i-plus"/></svg>Find artists</button><button type="button" class="outline-button" id="liked-artists-button" aria-haspopup="dialog"><svg aria-hidden="true"><use href="#i-heart"/></svg>Liked <span id="liked-count">0</span></button></div></div>
+      <div class="playlist-artists" id="playlist-artists"></div>
+      <div class="playlist-footer"><p id="playlist-status" role="status">Add artists from search or your likes. Uses the era, genre, and rounds above.</p><div><button type="button" class="text-button" id="clear-playlist">Clear playlist</button><button type="button" class="primary-button" id="shuffle-playlist"><svg aria-hidden="true"><use href="#i-shuffle"/></svg>Shuffle playlist</button></div></div>
     </section>
     <section class="hero" aria-labelledby="hero-title">
       <div class="hero-copy"><div class="eyebrow"><span class="tiny-spark" aria-hidden="true"><svg><use href="#i-spark"/></svg></span> SMALL CLIPS. BIG MUSIC ENERGY.</div><h1 id="hero-title">You know the song.<br>But how <span class="accent-word">soon<svg viewBox="0 0 190 15" aria-hidden="true"><path d="M3 10C55 1 122 2 185 6M12 14c54-7 111-7 160-5"/></svg></span>?</h1><p>Put your ears to the test. Start with just 0.1 seconds.</p></div>
@@ -83,7 +92,7 @@
       </div>
 
       <aside class="session-column" aria-label="Session progress" hidden>
-        <div class="session-card"><div class="section-label">YOUR SESSION <span class="session-dot"></span></div><div class="session-stats"><div><span><svg><use href="#i-star"/></svg> Score</span><strong id="score">0</strong></div><div><span><svg><use href="#i-fire"/></svg> Streak</span><strong id="streak">0<span> songs</span></strong></div></div><div class="round-list" id="round-list"></div><div class="session-footer"><svg><use href="#i-headphones"/></svg> Five songs. Infinite bragging rights.</div></div>
+        <div class="session-card"><div class="section-label">YOUR SESSION <span class="session-dot"></span></div><div class="session-stats"><div><span><svg><use href="#i-star"/></svg> Score</span><strong id="score">0</strong></div><div><span><svg><use href="#i-fire"/></svg> Streak</span><strong id="streak">0<span> songs</span></strong></div></div><div class="round-list" id="round-list"></div><div class="session-footer"><svg><use href="#i-headphones"/></svg> Your mix. Your round count.</div></div>
         <div class="tip-card"><span class="tip-icon">✳︎</span><div><strong>A tip for your ears</strong><p>Headphones on. World off.<br>Sometimes it’s all in the bassline.</p></div></div>
       </aside>
     </section>
